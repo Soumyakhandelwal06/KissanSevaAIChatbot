@@ -1,13 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 
 // ===================================================================================
-// CONFIGURATION
-// Use the FastAPI server URL (running on port 8000 by default)
-// ===================================================================================
-const API_BASE = "http://localhost:8000/api";
-const HEALTH_CHECK_URL = "http://localhost:8000/health";
-
-// ===================================================================================
 // NEW: Landing Page Component
 // This component serves as the welcome screen for your application.
 // ===================================================================================
@@ -86,7 +79,7 @@ const LandingPage = ({ onEnterChat }) => {
 
 // ===================================================================================
 // ORIGINAL: Farmer Chatbot Component
-// THIS COMPONENT CONTAINS ALL THE CONNECTION LOGIC UPDATES
+// This is your existing chatbot code, with corrections applied.
 // ===================================================================================
 
 const FarmerChatbot = () => {
@@ -108,14 +101,7 @@ const FarmerChatbot = () => {
   const imageInputRef = useRef(null);
   const voiceInputRef = useRef(null);
   const textInputRef = useRef(null);
-  
-  // Placeholder Context State (for Text Query)
-  const [context, setContext] = useState({
-    crop: "rice",
-    location: "Kerala",
-    season: "kharif" // Example values
-  });
-
+  const API_BASE = "http://localhost:5001/api";
   const farmingCategories = {
     crops: [
       "what crops should i plant in summer",
@@ -157,37 +143,30 @@ const FarmerChatbot = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]); 
-  
-  // Check connection on mount
+  }, [messages]); // Check connection on mount
   useEffect(() => {
     checkConnection();
-  }, []); 
-  
-  // Focus text input when tab changes
+  }, []); // Focus text input when tab changes
+
   useEffect(() => {
     if (activeTab === "text" && textInputRef.current) {
       setTimeout(() => textInputRef.current.focus(), 100);
     }
   }, [activeTab]);
-  
-  // ===============================================================================
-  // UPDATED: Check Connection to FastAPI /health endpoint
-  // ===============================================================================
   const checkConnection = async () => {
     try {
-      const response = await fetch(HEALTH_CHECK_URL);
+      const response = await fetch(`${API_BASE}/health`);
+      // const response = await fetch("http://localhost:5000/");
       setConnectionStatus(response.ok ? "connected" : "error");
     } catch (error) {
       setConnectionStatus("error");
       addMessage(
-        "🔧 Backend server not responding. Please start the Python FastAPI server on port 8000.",
+        "🔧 Backend server not responding. Please start the Node.js server on port 5000.",
         false,
         "system"
       );
     }
   };
-  
   const addMessage = (content, isUser, type = "text") => {
     const newMessage = {
       id: Date.now() + Math.random(),
@@ -198,133 +177,97 @@ const FarmerChatbot = () => {
     };
     setMessages((prev) => [...prev, newMessage]);
   };
-
-  // ===============================================================================
-  // UPDATED: sendTextMessage (FastAPI /api/query endpoint)
-  // ===============================================================================
   const sendTextMessage = async (messageText = null) => {
     const message = messageText || textInput.trim();
     if (!message) return;
-    
-    // Add user message to chat
     addMessage(message, true, "text");
     setTextInput("");
     setIsLoading(true);
-
-    const requestBody = {
-      query: message,
-      context: context, // Use the defined context
-      request_escalation: false
-    };
-
     try {
-      const response = await fetch(`${API_BASE}/query`, {
+      // FIXED: Used backticks (`) for template literal string
+      const response = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({ message }),
       });
-
       const data = await response.json();
       setIsLoading(false);
-
-      if (response.ok) {
-        // Response matches QueryResponse model (answer, confidence, used_model, etc.)
-        const confidenceDisplay = (data.confidence * 100).toFixed(1);
-        let answerContent = `Answer: ${data.answer}\n\n`;
-        answerContent += `Confidence: ${confidenceDisplay}%\n`;
-        answerContent += `Model: ${data.used_model}`;
-
-        if (data.escalation_id) {
-          answerContent += `\n\n⚠️ Low Confidence: This query was flagged for manual review (Escalation ID: ${data.escalation_id})`;
-        }
-
-        addMessage(answerContent, false, "text");
+      if (data.success) {
+        addMessage(data.response, false, "text");
       } else {
-        // Handle HTTP error (e.g., 429 Rate Limit, 500 Server Error)
-        const errorMessage = data.detail || "Unknown server error.";
-        addMessage(`❌ Backend Error: ${errorMessage}`, false, "error");
+        // FIXED: Used backticks (`) for template literal string
+        addMessage(`❌ ${data.error}`, false, "error");
       }
     } catch (error) {
       setIsLoading(false);
-      addMessage(`🚨 Connection failed: ${error.message}. Is FastAPI server running?`, false, "error");
+      // FIXED: Used backticks (`) for template literal string
+      addMessage(`🚨 Connection failed: ${error.message}`, false, "error");
     }
   };
-
-  // ===============================================================================
-  // UPDATED: uploadImage (FastAPI /api/image endpoint)
-  // ===============================================================================
   const uploadImage = async () => {
     const file = imageInputRef.current?.files[0];
     if (!file) {
       addMessage("📷 Please select an image first!", false, "system");
       return;
     }
-    
-    // Add user message to chat
-    addMessage(`📸 Analyzing image: ${file.name} (Crop: ${context.crop})`, true, "image");
+    // FIXED: Used backticks (`) for template literal string
+    addMessage(`📸 Analyzing image: ${file.name}`, true, "image");
     setIsLoading(true);
-
     const formData = new FormData();
-    // File upload must use 'file' as the key, matching FastAPI's `file: UploadFile = File(...)`
-    formData.append("file", file);
-    
-    // Also append the context data as text fields, matching FastAPI's optional parameters
-    formData.append("crop", context.crop);
-    formData.append("location", context.location);
-    formData.append("season", context.season);
-    
-    // Note: No "Content-Type" header is needed when sending FormData with fetch
-
+    formData.append("image", file);
     try {
-      const response = await fetch(`${API_BASE}/image`, {
+      // FIXED: Used backticks (`) for template literal string
+      const response = await fetch(`${API_BASE}/upload-image`, {
         method: "POST",
         body: formData,
       });
-
       const data = await response.json();
       setIsLoading(false);
-
-      if (response.ok) {
-        // Response matches ImageResponse model (label, confidence, used_model, etc.)
-        const confidenceDisplay = (data.confidence * 100).toFixed(1);
-        let answerContent = `Analysis Result:\n\n`;
-        answerContent += `Classification: ${data.label}\n`;
-        answerContent += `Confidence: ${confidenceDisplay}%\n`;
-        answerContent += `Model: ${data.used_model}`;
-        
-        if (data.escalation_id) {
-          answerContent += `\n\n⚠️ Low Confidence: This image analysis was flagged for manual review (Escalation ID: ${data.escalation_id})`;
-        }
-        
-        addMessage(answerContent, false, "image");
+      if (data.success) {
+        addMessage(data.response, false, "image");
       } else {
-        const errorMessage = data.detail || "Unknown server error during image analysis.";
-        addMessage(`❌ Backend Error: ${errorMessage}`, false, "error");
+        // FIXED: Used backticks (`) for template literal string
+        addMessage(`❌ ${data.error}`, false, "error");
       }
     } catch (error) {
       setIsLoading(false);
+      // FIXED: Used backticks (`) for template literal string
       addMessage(`🚨 Upload failed: ${error.message}`, false, "error");
     }
     imageInputRef.current.value = "";
   };
-
-  // The uploadVoice function is left as-is, since the FastAPI backend does not
-  // currently have a working voice processing endpoint defined.
   const uploadVoice = async () => {
     const file = voiceInputRef.current?.files[0];
     if (!file) {
       addMessage("🎤 Please select an audio file first!", false, "system");
       return;
     }
-    // TEMPORARILY DISABLED: FastAPI backend needs a voice endpoint.
-    addMessage(
-      "🚧 Voice functionality is temporarily disabled until the FastAPI backend adds a `/api/voice` endpoint.",
-      false,
-      "system"
-    );
+    // FIXED: Used backticks (`) for template literal string
+    addMessage(`🗣 Processing voice: ${file.name}`, true, "voice");
+    setIsLoading(true);
+    const formData = new FormData();
+    formData.append("voice", file);
+    try {
+      // FIXED: Used backticks (`) for template literal string
+      const response = await fetch(`${API_BASE}/upload-voice`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      setIsLoading(false);
+      if (data.success) {
+        addMessage(data.response, false, "voice");
+      } else {
+        // FIXED: Used backticks (`) for template literal string
+        addMessage(`❌ ${data.error}`, false, "error");
+      }
+    } catch (error) {
+      setIsLoading(false);
+      // FIXED: Used backticks (`) for template literal string
+      addMessage(`🚨 Processing failed: ${error.message}`, false, "error");
+    }
     voiceInputRef.current.value = "";
   };
-
 
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -497,7 +440,7 @@ const FarmerChatbot = () => {
                       value={textInput}
                       onChange={(e) => setTextInput(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="💬 Ask me anything about farming in English, Hindi, or Malayalam..."
+                      placeholder="💬 Ask me anything about farming..."
                       rows="2"
                       // FIXED: Changed text color to be visible on dark background
                       className="w-full p-3 bg-gray-700 border-2 border-gray-700 text-white rounded-xl focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 focus:outline-none transition-all resize-none placeholder-gray-400"
@@ -523,196 +466,164 @@ const FarmerChatbot = () => {
             </div>
             {/* Input Panel */}
             <div className="lg:w-96 bg-gradient-to-b from-gray-900 to-gray-800 border-l-2 border-gray-700">
-              {/* Context/Metadata Panel for all tabs */}
-              <div className="p-6 pb-2 border-b-2 border-gray-700">
-                <h4 className="font-semibold text-teal-400 mb-2">
-                  🌍 Farming Context
-                </h4>
-                <div className="space-y-2 text-sm">
-                  <input
-                    type="text"
-                    placeholder="Crop (e.g., rice)"
-                    value={context.crop}
-                    onChange={(e) => setContext(prev => ({...prev, crop: e.target.value}))}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-lg placeholder-gray-400 focus:ring-teal-500 focus:border-teal-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Location (e.g., Kerala)"
-                    value={context.location}
-                    onChange={(e) => setContext(prev => ({...prev, location: e.target.value}))}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-lg placeholder-gray-400 focus:ring-teal-500 focus:border-teal-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Season (e.g., kharif)"
-                    value={context.season}
-                    onChange={(e) => setContext(prev => ({...prev, season: e.target.value}))}
-                    className="w-full p-2 bg-gray-700 border border-gray-600 text-white rounded-lg placeholder-gray-400 focus:ring-teal-500 focus:border-teal-500"
-                  />
+              {/* Text Input Tab */}
+              {activeTab === "text" && (
+                <div className="p-6 h-full flex flex-col">
+                  {/* Quick Actions */}
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-cyan-400 mb-3">
+                      ⚡ Quick Actions
+                    </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      {quickActions.map((action, index) => (
+                        <button
+                          key={index}
+                          onClick={() => sendTextMessage(action.query)}
+                          className="p-3 bg-gray-800 border-2 border-gray-700 text-gray-300 rounded-xl hover:border-cyan-400 hover:text-cyan-400 hover:bg-gray-700 transition-all duration-200 transform hover:scale-105"
+                        >
+                          <div className="text-2xl mb-1">{action.icon}</div>
+                          <div className="text-xs font-medium text-gray-400">
+                            {action.text}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Categories */}
+                  <div className="flex-1 overflow-y-auto">
+                    <h4 className="font-semibold text-fuchsia-400 mb-3">
+                      📚 Browse Topics
+                    </h4>
+                    {Object.entries(farmingCategories).map(
+                      ([category, questions]) => (
+                        <details key={category} className="mb-3">
+                          <summary className="cursor-pointer p-3 bg-gray-800 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors capitalize font-medium text-gray-300">
+                            {category} ({questions.length})
+                          </summary>
+                          <div className="mt-2 space-y-1">
+                            {questions.map((question, index) => (
+                              <button
+                                key={index}
+                                onClick={() => sendTextMessage(question)}
+                                className="w-full text-left p-2 text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 rounded border hover:border-gray-600 transition-colors"
+                              >
+                                {question}
+                              </button>
+                            ))}
+                          </div>
+                        </details>
+                      )
+                    )}
+                  </div>
                 </div>
-              </div>
-
-              <div className="h-[calc(100%-150px)] overflow-y-auto p-6">
-                {/* Text Input Tab */}
-                {activeTab === "text" && (
-                  <div className="h-full flex flex-col">
-                    {/* Quick Actions */}
-                    <div className="mb-6">
-                      <h4 className="font-semibold text-cyan-400 mb-3">
-                        ⚡ Quick Actions
-                      </h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {quickActions.map((action, index) => (
-                          <button
-                            key={index}
-                            onClick={() => sendTextMessage(action.query)}
-                            className="p-3 bg-gray-800 border-2 border-gray-700 text-gray-300 rounded-xl hover:border-cyan-400 hover:text-cyan-400 hover:bg-gray-700 transition-all duration-200 transform hover:scale-105"
-                          >
-                            <div className="text-2xl mb-1">{action.icon}</div>
-                            <div className="text-xs font-medium text-gray-400">
-                              {action.text}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    {/* Categories */}
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-fuchsia-400 mb-3">
-                        📚 Browse Topics
-                      </h4>
-                      {Object.entries(farmingCategories).map(
-                        ([category, questions]) => (
-                          <details key={category} className="mb-3">
-                            <summary className="cursor-pointer p-3 bg-gray-800 rounded-lg border border-gray-700 hover:bg-gray-700 transition-colors capitalize font-medium text-gray-300">
-                              {category} ({questions.length})
-                            </summary>
-                            <div className="mt-2 space-y-1">
-                              {questions.map((question, index) => (
-                                <button
-                                  key={index}
-                                  onClick={() => sendTextMessage(question)}
-                                  className="w-full text-left p-2 text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 rounded border hover:border-gray-600 transition-colors"
-                                >
-                                  {question}
-                                </button>
-                              ))}
-                            </div>
-                          </details>
-                        )
-                      )}
-                    </div>
-                  </div>
-                )}
-                {/* Image Input Tab */}
-                {activeTab === "image" && (
-                  <div className="h-full flex flex-col">
-                    <h3 className="text-xl font-bold text-fuchsia-400 mb-4 flex items-center gap-2">
-                      <span>📸</span> Image Analysis
-                    </h3>
-                    <div className="flex-1 flex flex-col gap-4">
-                      <div className="border-2 border-dashed border-cyan-400 rounded-xl bg-gray-900 p-6 text-center hover:border-cyan-500 hover:bg-gray-800 transition-all">
-                        <input
-                          ref={imageInputRef}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              const preview =
-                                document.getElementById("image-preview");
-                              preview.textContent = `📷 ${file.name}`;
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={() => imageInputRef.current?.click()}
-                          className="w-full"
-                        >
-                          <div className="text-4xl mb-2">📸</div>
-                          <div className="font-semibold text-cyan-400 mb-1">
-                            Upload Plant Image
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            Click to select image
-                          </div>
-                          <div
-                            id="image-preview"
-                            className="text-sm text-cyan-500 mt-2 font-medium"
-                          ></div>
-                        </button>
-                      </div>
+              )}
+              {/* Image Input Tab */}
+              {activeTab === "image" && (
+                <div className="p-6 h-full flex flex-col">
+                  <h3 className="text-xl font-bold text-fuchsia-400 mb-4 flex items-center gap-2">
+                    <span>📸</span> Image Analysis
+                  </h3>
+                  <div className="flex-1 flex flex-col gap-4">
+                    <div className="border-2 border-dashed border-cyan-400 rounded-xl bg-gray-900 p-6 text-center hover:border-cyan-500 hover:bg-gray-800 transition-all">
+                      <input
+                        ref={imageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const preview =
+                              document.getElementById("image-preview");
+                            preview.textContent = `📷 ${file.name}`;
+                          }
+                        }}
+                      />
                       <button
-                        onClick={uploadImage}
-                        disabled={isLoading}
-                        className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg"
+                        onClick={() => imageInputRef.current?.click()}
+                        className="w-full"
                       >
-                        {isLoading ? "Analyzing..." : "Analyze Image 🔍"}
-                      </button>
-                      <div className="bg-gray-900 p-4 rounded-xl border-2 border-purple-800">
-                        <h4 className="font-semibold text-purple-400 mb-2">
-                          💡 Pro Tips
-                        </h4>
-                        <ul className="text-sm text-gray-400 space-y-1">
-                          <li>• Use clear, well-lit photos</li>
-                          <li>• Focus on the affected area</li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {/* Voice Input Tab */}
-                {activeTab === "voice" && (
-                  <div className="h-full flex flex-col">
-                    <h3 className="text-xl font-bold text-fuchsia-400 mb-4 flex items-center gap-2">
-                      <span>🎤</span> Voice Message
-                    </h3>
-                    <div className="flex-1 flex flex-col gap-4">
-                      <div className="border-2 border-dashed border-orange-400 rounded-xl bg-gray-900 p-6 text-center hover:border-orange-500 hover:bg-gray-800 transition-all">
-                        <input
-                          ref={voiceInputRef}
-                          type="file"
-                          accept="audio/*"
-                          className="hidden"
-                          onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              const preview =
-                                document.getElementById("voice-preview");
-                              preview.textContent = `🎵 ${file.name}`;
-                            }
-                          }}
-                        />
-                        <button
-                          onClick={() => voiceInputRef.current?.click()}
-                          className="w-full"
-                        >
-                          <div className="text-4xl mb-2">🎤</div>
-                          <div className="font-semibold text-orange-400 mb-1">
-                            Upload Audio File
-                          </div>
-                          <div className="text-sm text-gray-400">
-                            Click to select audio
-                          </div>
-                          <div
-                            id="voice-preview"
-                            className="text-sm text-orange-500 mt-2 font-medium"
-                          ></div>
-                        </button>
-                      </div>
-                      <button
-                        onClick={uploadVoice}
-                        disabled={isLoading}
-                        className="w-full py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-semibold hover:from-orange-700 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg"
-                      >
-                        {isLoading ? "Processing..." : "Process Voice 🗣"}
+                        <div className="text-4xl mb-2">📸</div>
+                        <div className="font-semibold text-cyan-400 mb-1">
+                          Upload Plant Image
+                        </div>
+                        <div className="text-sm text-gray-400">
+                          Click to select image
+                        </div>
+                        <div
+                          id="image-preview"
+                          className="text-sm text-cyan-500 mt-2 font-medium"
+                        ></div>
                       </button>
                     </div>
+                    <button
+                      onClick={uploadImage}
+                      disabled={isLoading}
+                      className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg"
+                    >
+                      {isLoading ? "Analyzing..." : "Analyze Image 🔍"}
+                    </button>
+                    <div className="bg-gray-900 p-4 rounded-xl border-2 border-purple-800">
+                      <h4 className="font-semibold text-purple-400 mb-2">
+                        💡 Pro Tips
+                      </h4>
+                      <ul className="text-sm text-gray-400 space-y-1">
+                        <li>• Use clear, well-lit photos</li>
+                        <li>• Focus on the affected area</li>
+                      </ul>
+                    </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+              {/* Voice Input Tab */}
+              {activeTab === "voice" && (
+                <div className="p-6 h-full flex flex-col">
+                  <h3 className="text-xl font-bold text-fuchsia-400 mb-4 flex items-center gap-2">
+                    <span>🎤</span> Voice Message
+                  </h3>
+                  <div className="flex-1 flex flex-col gap-4">
+                    <div className="border-2 border-dashed border-orange-400 rounded-xl bg-gray-900 p-6 text-center hover:border-orange-500 hover:bg-gray-800 transition-all">
+                      <input
+                        ref={voiceInputRef}
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (file) {
+                            const preview =
+                              document.getElementById("voice-preview");
+                            preview.textContent = `🎵 ${file.name}`;
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={() => voiceInputRef.current?.click()}
+                        className="w-full"
+                      >
+                        <div className="text-4xl mb-2">🎤</div>
+                        <div className="font-semibold text-orange-400 mb-1">
+                          Upload Audio File
+                        </div>
+                        <div className="text-sm text-gray-400">
+                          Click to select audio
+                        </div>
+                        <div
+                          id="voice-preview"
+                          className="text-sm text-orange-500 mt-2 font-medium"
+                        ></div>
+                      </button>
+                    </div>
+                    <button
+                      onClick={uploadVoice}
+                      disabled={isLoading}
+                      className="w-full py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-semibold hover:from-orange-700 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg"
+                    >
+                      {isLoading ? "Processing..." : "Process Voice 🗣"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
