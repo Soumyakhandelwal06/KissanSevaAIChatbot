@@ -462,43 +462,8 @@ class RateLimiter:
         self.clients[client_id].append(now)
         return True
 
-# ==================== LIFESPAN CONTEXT MANAGER ====================
-from contextlib import asynccontextmanager
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global db_client, db
-    
-    # --- Startup Logic (Previously @app.on_event("startup")) ---
-    db_client = motor.motor.asyncio.AsyncIOMotorClient(MONGODB_URL)
-    db = db_client[DB_NAME]
-    logger.info("Connected to MongoDB")
-    
-    # Load models
-    model_loader.load_all_models()
-    
-    # Load translation models
-    translator.load_translation_models()
-    logger.info("All models loaded")
-    
-    # Yield control to the application (server is ready to receive requests)
-    yield
-    
-    # --- Shutdown Logic (Previously @app.on_event("shutdown")) ---
-    if db_client:
-        db_client.close()
-        logger.info("Closed MongoDB connection")
-
-# ==================== END LIFESPAN CONTEXT MANAGER ====================
-
-
 # ==================== FASTAPI APP ====================
-app = FastAPI(
-    title="Farmer Advisory System API", 
-    description="AI-powered agricultural advisory system", 
-    version="1.0.0",
-    lifespan=lifespan 
-)
+app = FastAPI(title="Farmer Advisory System API", description="AI-powered agricultural advisory system", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -516,27 +481,23 @@ db_client = None
 db = None
 
 # ==================== DATABASE EVENTS ====================
+@app.on_event("startup")
+async def startup_db_client():
+    global db_client, db
+    db_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
+    db = db_client[DB_NAME]
+    logger.info("Connected to MongoDB")
+    # Load models (this will attempt to load all configured models)
+    model_loader.load_all_models()
+    # Load translation models
+    translator.load_translation_models() # LOAD TRANSLATION MODELS HERE
+    logger.info("All models loaded")
 
-
-# @app.on_event("startup")
-# async def startup_db_client():
-#     global db_client, db
-#     db_client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
-#     db = db_client[DB_NAME]
-#     logger.info("Connected to MongoDB")
-#     # Load models (this will attempt to load all configured models)
-#     model_loader.load_all_models()
-#     # Load translation models
-#     translator.load_translation_models() # LOAD TRANSLATION MODELS HERE
-#     logger.info("All models loaded")
-
-# @app.on_event("shutdown")
-# async def shutdown_db_client():
-#     if db_client:
-#         db_client.close()
-#         logger.info("Closed MongoDB connection")
-
-
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    if db_client:
+        db_client.close()
+        logger.info("Closed MongoDB connection")
 
 # ==================== RATE LIMIT MIDDLEWARE ====================
 # ... (Keep rate_limit_middleware as is) ...
