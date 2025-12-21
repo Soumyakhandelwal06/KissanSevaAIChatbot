@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+env/
+.env
+
+# Large Model Files
+*.safetensors
+*.h5
+*.keras
+*.sav
+*.pkl
+
+# Specific large directories/files identified
+models2/farmer_faq/model.safetensors
+models2/crop_images_model_outputs/
+models2/insect_image_model_outputs/

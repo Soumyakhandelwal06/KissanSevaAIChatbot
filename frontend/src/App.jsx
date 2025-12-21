@@ -7,9 +7,13 @@ import React, { useState, useRef, useEffect } from "react";
 const API_BASE = "http://localhost:8000/api";
 const HEALTH_CHECK_URL = "http://localhost:8000/health";
 
+// --- Removed: Feature Lists (No longer used for custom prediction) ---
+// const SOIL_TYPES = ["Clayey", "Loamy", "Red", "Sandy", "Black"];
+// const CROP_TYPES = ["Cotton", "Ground Nuts", "Maize", "Millets", "Oil seeds", "Paddy", "Pulses", "Sugarcane", "Tobacco", "Wheat", "Bajra",];
+// const NUMERICAL_FEATURES = ["Temparature", "Humidity", "Moisture", "Nitrogen", "Potassium", "Phosphorous"];
+
 // ===================================================================================
-// NEW: Landing Page Component
-// This component serves as the welcome screen for your application.
+// Landing Page Component (No Change)
 // ===================================================================================
 const LandingPage = ({ onEnterChat }) => {
   return (
@@ -63,7 +67,7 @@ const LandingPage = ({ onEnterChat }) => {
         </button>
       </div>
       <footer className="absolute bottom-4 text-center text-white/70 text-sm">
-        ©️ 2025 KissanSeva AI. Empowering Farmers with Technology.
+        © 2025 KissanSeva AI. Empowering Farmers with Technology.
       </footer>
       <style jsx>{`
         @keyframes fadeIn {
@@ -85,8 +89,7 @@ const LandingPage = ({ onEnterChat }) => {
 };
 
 // ===================================================================================
-// ORIGINAL: Farmer Chatbot Component
-// THIS COMPONENT CONTAINS ALL THE CONNECTION LOGIC UPDATES
+// Farmer Chatbot Component
 // ===================================================================================
 
 const FarmerChatbot = () => {
@@ -109,12 +112,15 @@ const FarmerChatbot = () => {
   const voiceInputRef = useRef(null);
   const textInputRef = useRef(null);
   
-  // Placeholder Context State (for Text Query)
+  // --- State for basic context ---
   const [context, setContext] = useState({
     crop: "rice",
     location: "Kerala",
-    season: "kharif" // Example values
+    season: "kharif" 
   });
+  
+  // Removed: predictionFeatures state.
+  // --- END State Update ---
 
   const farmingCategories = {
     crops: [
@@ -153,27 +159,22 @@ const FarmerChatbot = () => {
       text: "Watering Guide",
       query: "watering schedule for plants",
     },
-  ]; // Auto-scroll to bottom
+  ];
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]); 
   
-  // Check connection on mount
   useEffect(() => {
     checkConnection();
   }, []); 
   
-  // Focus text input when tab changes
   useEffect(() => {
     if (activeTab === "text" && textInputRef.current) {
       setTimeout(() => textInputRef.current.focus(), 100);
     }
   }, [activeTab]);
   
-  // ===============================================================================
-  // UPDATED: Check Connection to FastAPI /health endpoint
-  // ===============================================================================
   const checkConnection = async () => {
     try {
       const response = await fetch(HEALTH_CHECK_URL);
@@ -200,25 +201,31 @@ const FarmerChatbot = () => {
   };
 
   // ===============================================================================
-  // UPDATED: sendTextMessage (FastAPI /api/query endpoint)
+  // UPDATED: sendTextMessage (FastAPI /api/chat endpoint -> Calls Gemini API)
+  // Logic simplified for a standard, non-prediction chat interaction.
   // ===============================================================================
   const sendTextMessage = async (messageText = null) => {
     const message = messageText || textInput.trim();
     if (!message) return;
-    
+
     // Add user message to chat
     addMessage(message, true, "text");
     setTextInput("");
     setIsLoading(true);
 
+    const requestContext = { 
+        crop: context.crop, 
+        location: context.location, 
+        season: context.season,
+    };
+    
     const requestBody = {
       query: message,
-      context: context, // Use the defined context
-      request_escalation: false
+      context: requestContext, 
     };
 
     try {
-      const response = await fetch(`${API_BASE}/query`, {
+      const response = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
@@ -228,15 +235,20 @@ const FarmerChatbot = () => {
       setIsLoading(false);
 
       if (response.ok) {
-        // Response matches QueryResponse model (answer, confidence, used_model, etc.)
-        const confidenceDisplay = (data.confidence * 100).toFixed(1);
-        let answerContent = `Answer: ${data.answer}\n\n`;
-        answerContent += `Confidence: ${confidenceDisplay}%\n`;
-        answerContent += `Model: ${data.used_model}`;
+        // ASSUMPTION: FastAPI now returns a simple object with the Gemini-generated text.
+        // It should have an 'answer' field and may optionally include other fields like 'confidence'.
+        let answerContent = data.answer || "I'm sorry, I couldn't get a response from the AI.";
 
-        if (data.escalation_id) {
-          answerContent += `\n\n⚠️ Low Confidence: This query was flagged for manual review (Escalation ID: ${data.escalation_id})`;
+        // Optional: Include intent/confidence if backend still returns it (see backend changes)
+        if (data.confidence && data.intent) {
+            const confidenceDisplay = (data.confidence * 100).toFixed(1);
+            answerContent += `\n\n---`;
+            answerContent += `\nConfidence: ${confidenceDisplay}% (Intent: ${data.intent})`;
+            if (data.escalation_id) {
+                answerContent += `\n⚠️ Low Confidence: This query was flagged for manual review (Escalation ID: ${data.escalation_id})`;
+            }
         }
+
 
         addMessage(answerContent, false, "text");
       } else {
@@ -251,7 +263,7 @@ const FarmerChatbot = () => {
   };
 
   // ===============================================================================
-  // UPDATED: uploadImage (FastAPI /api/image endpoint)
+  // uploadImage (No functional change)
   // ===============================================================================
   const uploadImage = async () => {
     const file = imageInputRef.current?.files[0];
@@ -265,16 +277,11 @@ const FarmerChatbot = () => {
     setIsLoading(true);
 
     const formData = new FormData();
-    // File upload must use 'file' as the key, matching FastAPI's `file: UploadFile = File(...)`
     formData.append("file", file);
-    
-    // Also append the context data as text fields, matching FastAPI's optional parameters
     formData.append("crop", context.crop);
     formData.append("location", context.location);
     formData.append("season", context.season);
     
-    // Note: No "Content-Type" header is needed when sending FormData with fetch
-
     try {
       const response = await fetch(`${API_BASE}/image`, {
         method: "POST",
@@ -285,12 +292,13 @@ const FarmerChatbot = () => {
       setIsLoading(false);
 
       if (response.ok) {
-        // Response matches ImageResponse model (label, confidence, used_model, etc.)
+        // Response matches ImageResponse model
         const confidenceDisplay = (data.confidence * 100).toFixed(1);
         let answerContent = `Analysis Result:\n\n`;
         answerContent += `Classification: ${data.label}\n`;
         answerContent += `Confidence: ${confidenceDisplay}%\n`;
-        answerContent += `Model: ${data.used_model}`;
+        answerContent += `Remedy: ${data.remedy}`; // Added remedy from backend model
+        answerContent += `\nModel: ${data.used_model}`;
         
         if (data.escalation_id) {
           answerContent += `\n\n⚠️ Low Confidence: This image analysis was flagged for manual review (Escalation ID: ${data.escalation_id})`;
@@ -308,15 +316,15 @@ const FarmerChatbot = () => {
     imageInputRef.current.value = "";
   };
 
-  // The uploadVoice function is left as-is, since the FastAPI backend does not
-  // currently have a working voice processing endpoint defined.
+  // ===============================================================================
+  // Placeholder: uploadVoice (No change)
+  // ===============================================================================
   const uploadVoice = async () => {
     const file = voiceInputRef.current?.files[0];
     if (!file) {
       addMessage("🎤 Please select an audio file first!", false, "system");
       return;
     }
-    // TEMPORARILY DISABLED: FastAPI backend needs a voice endpoint.
     addMessage(
       "🚧 Voice functionality is temporarily disabled until the FastAPI backend adds a `/api/voice` endpoint.",
       false,
@@ -407,7 +415,7 @@ const FarmerChatbot = () => {
           </div>
         </div>
         <div className="bg-gray-800/95 backdrop-blur-md shadow-2xl rounded-b-3xl overflow-hidden">
-          {/* Tab Navigation */}
+          {/* Tab Navigation (UPDATED: Prediction tab removed) */}
           <div className="bg-gray-900 px-6 pt-6">
             <div className="flex gap-2">
               <TabButton
@@ -417,6 +425,13 @@ const FarmerChatbot = () => {
                 isActive={activeTab === "text"}
                 onClick={() => setActiveTab("text")}
               />
+              {/* Removed: Prediction tab <TabButton
+                id="features"
+                icon="📊"
+                label="Prediction"
+                isActive={activeTab === "features"}
+                onClick={() => setActiveTab("features")}
+              /> */}
               <TabButton
                 id="image"
                 icon="📸"
@@ -488,7 +503,7 @@ const FarmerChatbot = () => {
                 )}
                 <div ref={messagesEndRef} />
               </div>
-              {/* Ask Anything Input - At bottom of chat area */}
+              {/* Ask Anything Input - Only for the Text tab */}
               {activeTab === "text" && (
                 <div className="border-t-2 border-gray-700 bg-gray-800 p-4">
                   <div className="flex flex-col gap-3">
@@ -499,7 +514,6 @@ const FarmerChatbot = () => {
                       onKeyPress={handleKeyPress}
                       placeholder="💬 Ask me anything about farming in English, Hindi, or Malayalam..."
                       rows="2"
-                      // FIXED: Changed text color to be visible on dark background
                       className="w-full p-3 bg-gray-700 border-2 border-gray-700 text-white rounded-xl focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/50 focus:outline-none transition-all resize-none placeholder-gray-400"
                     />
                     <div className="flex gap-2">
@@ -557,7 +571,7 @@ const FarmerChatbot = () => {
                 {/* Text Input Tab */}
                 {activeTab === "text" && (
                   <div className="h-full flex flex-col">
-                    {/* Quick Actions */}
+                    {/* Quick Actions and Categories (No change) */}
                     <div className="mb-6">
                       <h4 className="font-semibold text-cyan-400 mb-3">
                         ⚡ Quick Actions
@@ -577,7 +591,6 @@ const FarmerChatbot = () => {
                         ))}
                       </div>
                     </div>
-                    {/* Categories */}
                     <div className="flex-1">
                       <h4 className="font-semibold text-fuchsia-400 mb-3">
                         📚 Browse Topics
@@ -605,6 +618,10 @@ const FarmerChatbot = () => {
                     </div>
                   </div>
                 )}
+                
+                {/* Removed: Prediction Features Tab */}
+                {/* {activeTab === "features" && <PredictionForm />} */}
+
                 {/* Image Input Tab */}
                 {activeTab === "image" && (
                   <div className="h-full flex flex-col">
@@ -742,17 +759,12 @@ const FarmerChatbot = () => {
   );
 };
 
-
-
-
 // ===================================================================================
-// NEW: Main App Component
-// This component manages whether to show the LandingPage or the FarmerChatbot.
+// Main App Component
 // ===================================================================================
 const App = () => {
   const [showChat, setShowChat] = useState(false);
 
-  // If showChat is true, render the chatbot, otherwise render the landing page.
   if (showChat) {
     return <FarmerChatbot />;
   }
