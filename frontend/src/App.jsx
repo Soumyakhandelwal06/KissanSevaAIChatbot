@@ -9,262 +9,427 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API
 const HEALTH_CHECK_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/health` : "http://localhost:8000/health";
 
 // ===================================================================================
+// Error Boundary for Debugging
+// ===================================================================================
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    this.setState({ error: error, errorInfo: errorInfo });
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 bg-white text-red-800 h-screen overflow-auto">
+          <h1 className="text-2xl font-bold mb-4">Something went wrong.</h1>
+          <details className="whitespace-pre-wrap">
+            {this.state.error && this.state.error.toString()}
+            <br />
+            {this.state.errorInfo && this.state.errorInfo.componentStack}
+          </details>
+          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-red-600 text-white rounded">
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// ===================================================================================
 // Landing Page Component (Futuristic Update)
 // ===================================================================================
 const LandingPage = ({ onEnterChat }) => {
-  return (
-    <div className="min-h-screen farmer-gradient text-white flex flex-col items-center py-4 md:py-6 p-4 relative overflow-x-hidden selection:bg-emerald-500/30">
-      {/* Animated Background Elements with Parallax-like feel */}
-      <div className="fixed inset-0 bg-grid-pattern opacity-20 pointer-events-none transform translate-z-0"></div>
-      <div className="fixed top-[-10%] left-[-10%] w-[50%] h-[50%] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse pointer-events-none"></div>
-      <div className="fixed bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-600/10 rounded-full blur-[120px] animate-pulse pointer-events-none"></div>
+  const [showGuide, setShowGuide] = useState(false);
+  const [showResources, setShowResources] = useState(false);
+  const [showTeam, setShowTeam] = useState(false);
 
-      {/* Scanning Line */}
-      <div className="fixed left-0 right-0 h-[2px] bg-emerald-500/20 blur-sm animate-scan pointer-events-none z-0"></div>
+  const TeamModal = () => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[#1B4332]/60 backdrop-blur-md" onClick={() => setShowTeam(false)}></div>
+      <div className="harvest-card w-full max-w-lg p-8 relative z-10 animate-scale-up overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#FFB703] via-[#2D6A4F] to-[#FFB703]"></div>
+        <button 
+          onClick={() => setShowTeam(false)}
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[#2D6A4F]/5 flex items-center justify-center text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white transition-all font-bold"
+        >✕</button>
+        
+        <div className="text-center mb-8">
+          <span className="text-4xl mb-2 block">🤝</span>
+          <h2 className="text-3xl font-black text-[#1B4332] mb-2 tracking-tight">MEET THE MAKERS</h2>
+          <p className="text-[#5D4037]/70 font-bold text-sm uppercase tracking-widest">Technocrats for Agriculture</p>
+        </div>
 
-      {/* Floating Particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-emerald-500/30 rounded-full animate-float"
-            style={{
-              top: `${Math.random() * 100}%`,
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 5}s`,
-              animationDuration: `${7 + Math.random() * 10}s`,
-            }}
-          ></div>
-        ))}
-      </div>
-
-      <div className="text-center max-w-5xl mx-auto z-10 flex flex-col items-center min-h-[40vh] justify-center">
-        <div className="mb-2 md:mb-3 animate-float">
-          <div className="relative inline-block animate-pulse-glow rounded-full">
-            <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-2xl animate-pulse"></div>
-            <span className="text-4xl md:text-6xl filter drop-shadow-[0_0_30px_rgba(16,185,129,0.6)] relative z-10">
-              🚜
-            </span>
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 rounded-full animate-ping"></div>
+        <div className="space-y-4">
+          <div className="harvest-card p-4 flex items-center gap-4 bg-[#74C69D]/10 border border-[#2D6A4F]/10">
+             <div className="w-14 h-14 bg-[#2D6A4F] rounded-full flex items-center justify-center text-2xl text-white shadow-lg">👨‍💻</div>
+             <div>
+                <h3 className="font-black text-[#1B4332] text-lg">Soumya Khandelwal</h3>
+                <p className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider">Key Contributor</p>
+             </div>
+          </div>
+          <div className="harvest-card p-4 flex items-center gap-4 bg-[#FFB703]/10 border border-[#FFB703]/20">
+             <div className="w-14 h-14 bg-[#FFB703] rounded-full flex items-center justify-center text-2xl text-[#1B4332] shadow-lg">💡</div>
+             <div>
+                <h3 className="font-black text-[#1B4332] text-lg">Naman Agrawal</h3>
+                <p className="text-xs font-bold text-[#5D4037]/80 uppercase tracking-wider">Key Contributor</p>
+             </div>
+          </div>
+          <div className="harvest-card p-4 flex items-center gap-4 bg-[#E9C46A]/10 border border-[#E9C46A]/20">
+             <div className="w-14 h-14 bg-[#E9C46A] rounded-full flex items-center justify-center text-2xl text-[#1B4332] shadow-lg">✨</div>
+             <div>
+                <h3 className="font-black text-[#1B4332] text-lg">Somya Porwal</h3>
+                <p className="text-xs font-bold text-[#5D4037]/80 uppercase tracking-wider">Key Contributor</p>
+             </div>
           </div>
         </div>
 
-        <h1
-          className="text-4xl md:text-7xl font-black mb-2 tracking-tighter animate-slideUp"
-          style={{ animationDelay: "0.1s" }}
-        >
-          <span className="bg-linear-to-r from-emerald-400 via-emerald-500 to-green-600 bg-clip-text text-transparent animate-gradient">
-            KISSANSEVAAI
-          </span>
-        </h1>
-
-        <p
-          className="text-base md:text-xl mb-6 font-light text-slate-400 max-w-3xl mx-auto leading-relaxed px-4 animate-slideUp"
-          style={{ animationDelay: "0.2s" }}
-        >
-          Your Digital Partner for{" "}
-          <span className="text-emerald-400 font-medium">Smarter Farming</span>{" "}
-          and Bumper Harvests.
-        </p>
-
-        {/* Scroll Indicator */}
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 animate-bounce opacity-40">
-          <span className="text-[7px] uppercase tracking-[0.2em] text-emerald-500 font-bold animate-pulse">
-            Explore
-          </span>
-          <div className="w-px h-4 bg-linear-to-b from-emerald-500 to-transparent"></div>
+        <div className="mt-8 text-center">
+          <p className="text-[10px] font-bold text-[#5D4037]/50 uppercase tracking-widest">
+            Made with ❤️ to empower Indian Farmers
+          </p>
         </div>
       </div>
+    </div>
+  );
 
-      <div className="w-full max-w-6xl mx-auto z-10 mt-2">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-8 w-full px-4">
-          {/* Feature Cards */}
+  const ResourcesHub = () => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[#1B4332]/70 backdrop-blur-md" onClick={() => setShowResources(false)}></div>
+      <div className="harvest-card w-full max-w-4xl p-8 relative z-10 animate-scale-up overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#FFB703] via-[#74C69D] to-[#FFB703]"></div>
+        <button 
+          onClick={() => setShowResources(false)}
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[#2D6A4F]/5 flex items-center justify-center text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white transition-all font-bold"
+        >✕</button>
+        
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-black text-[#1B4332] mb-2 tracking-tight">RESOURCES HUB</h2>
+          <p className="text-[#5D4037]/70 font-bold text-sm uppercase tracking-widest">Essential Tools for Every Farmer</p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
-            {
-              icon: "🌾",
-              title: "Crop Intelligence",
-              desc: "Expert guidance on crop selection and modern farming techniques.",
-              delay: "0.3s",
-            },
-            {
-              icon: "🔍",
-              title: "Instant Diagnosis",
-              desc: "Identify pests and diseases instantly with just a photo.",
-              delay: "0.4s",
-            },
-            {
-              icon: "🗣️",
-              title: "Voice Support",
-              desc: "Talk to your assistant naturally for hands-free farming help.",
-              delay: "0.5s",
-            },
-          ].map((feature, i) => (
-            <div
-              key={i}
-              className="futuristic-glass p-3 md:p-4 rounded-[1.2rem] futuristic-border transform hover:scale-105 transition-all duration-500 group animate-slideUp"
-              style={{ animationDelay: feature.delay }}
-            >
-              <div className="text-2xl md:text-3xl mb-1 group-hover:scale-110 transition-transform group-hover:rotate-6">
-                {feature.icon}
+            { tag: "LIVE", icon: "📊", title: "Mandi Prices", desc: "Real-time updates on crop prices in your nearest markers (APMCs).", color: "#2D6A4F" },
+            { tag: "NEW", icon: "📜", title: "Govt Schemes", desc: "Easy guides for PM-Kisan, Fasal Bima Yojana, and local subsidies.", color: "#74C69D" },
+            { tag: "LIBRARY", icon: "🐛", title: "Pest Catalog", desc: "Identify common pests and diseases with organic and chemical cures.", color: "#FFB703" },
+            { tag: "ADVISORY", icon: "☀️", title: "Weather Alerts", desc: "Detailed sowing and harvesting windows based on local forecasts.", color: "#1B4332" },
+            { tag: "SERVICES", icon: "🚜", title: "Rent Machinery", desc: "Connect with local Custom Hiring Centers for modern equipment.", color: "#5D4037" },
+            { tag: "GUIDE", icon: "💧", title: "Water Saving", desc: "Drip irrigation models and monsoon water harvesting techniques.", color: "#40916C" }
+          ].map((item, i) => (
+            <div key={i} className="harvest-card p-6 flex flex-col items-start gap-4 hover:border-[#74C69D] group transition-all cursor-pointer">
+              <div className="flex justify-between w-full items-center">
+                <div className="text-3xl grayscale group-hover:grayscale-0 transition-all">{item.icon}</div>
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[#2D6A4F]/5 text-[#2D6A4F] border border-[#2D6A4F]/10">{item.tag}</span>
               </div>
-              <h3
-                className={`text-base md:text-lg font-bold mb-1 text-emerald-400 group-hover:text-emerald-300 transition-colors`}
-              >
-                {feature.title}
-              </h3>
-              <p className="text-slate-400 text-[10px] md:text-xs leading-relaxed group-hover:text-slate-300 transition-colors">
-                {feature.desc}
-              </p>
-              {/* Card Glow Effect */}
-              <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-[1.2rem] pointer-events-none"></div>
+              <div>
+                <h3 className="font-black text-[#1B4332] text-lg leading-tight mb-2">{item.title}</h3>
+                <p className="text-xs font-medium text-[#5D4037]/70 leading-relaxed">{item.desc}</p>
+              </div>
+              <button className="text-[10px] font-black text-[#2D6A4F] mt-auto uppercase tracking-wider group-hover:translate-x-1 transition-transform">View Details →</button>
             </div>
           ))}
         </div>
 
-        <div className="flex justify-center mb-4">
-          <button
-            onClick={onEnterChat}
-            className="group relative px-6 py-2.5 md:px-8 md:py-3 bg-transparent overflow-hidden rounded-full transition-all duration-500 animate-slideUp shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_40px_rgba(16,185,129,0.6)] animate-shimmer hover:scale-105 active:scale-95"
-            style={{ animationDelay: "0.6s" }}
-          >
-            <div className="absolute inset-0 bg-linear-to-r from-emerald-500 via-green-600 to-emerald-700 transition-all duration-500 group-hover:scale-110"></div>
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-[radial-gradient(circle_at_center,var(--tw-gradient-from)_0%,transparent_70%)] from-white/30 transition-opacity duration-300"></div>
-            <div className="absolute inset-0 bg-grid-pattern opacity-10 group-hover:opacity-20 transition-opacity"></div>
+        <div className="mt-8 p-4 bg-[#74C69D]/10 rounded-2xl flex items-center justify-between border border-[#74C69D]/20">
+          <div className="flex items-center gap-3">
+             <span className="text-xl">📞</span>
+             <p className="text-[11px] font-bold text-[#1B4332]">Kissan Helpline: <span className="text-[#2D6A4F]">1800-180-1551</span></p>
+          </div>
+          <button className="text-[10px] font-black bg-[#2D6A4F] text-white px-4 py-2 rounded-lg hover:scale-105 transition-transform">CALL NOW</button>
+        </div>
+      </div>
+    </div>
+  );
 
-            {/* Inner Border Glow */}
-            <div className="absolute inset-[2px] rounded-full border border-white/10 pointer-events-none"></div>
+  const GuideModal = () => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[#1B4332]/60 backdrop-blur-md" onClick={() => setShowGuide(false)}></div>
+      <div className="harvest-card w-full max-w-2xl p-8 relative z-10 animate-scale-up overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#2D6A4F] via-[#74C69D] to-[#2D6A4F]"></div>
+        <button 
+          onClick={() => setShowGuide(false)}
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[#2D6A4F]/5 flex items-center justify-center text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white transition-all font-bold"
+        >✕</button>
+        
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-black text-[#1B4332] mb-2 tracking-tight">HOW IT WORKS</h2>
+          <p className="text-[#5D4037]/70 font-bold text-sm uppercase tracking-widest">Your 4-Step Path to Better Farming</p>
+        </div>
 
-            <span className="relative text-xs md:text-sm font-black tracking-[0.2em] flex items-center gap-2 text-white drop-shadow-lg">
-              ENTER COMMAND CENTER{" "}
-              <span className="group-hover:translate-x-1 transition-transform duration-500 text-emerald-300">
-                →
-              </span>
-            </span>
-          </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {[
+            { step: "01", icon: "📍", title: "Connect", desc: "Set your farm location and snap a photo of your soil context to get started." },
+            { step: "02", icon: "💬", title: "Ask", desc: "Use voice, text, or photos to tell us about your crop concerns or questions." },
+            { step: "03", icon: "⚡", title: "Process", desc: "Our AI analyzes satellite data and field metrics to find the perfect solution." },
+            { step: "04", icon: "📈", title: "Grow", desc: "Receive expert advice and precise predictions to maximize your harvest yield." }
+          ].map((item, i) => (
+            <div key={i} className="flex gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-[#2D6A4F]/10 rounded-2xl flex items-center justify-center text-2xl relative">
+                {item.icon}
+                <span className="absolute -top-2 -left-2 text-[10px] font-black text-[#2D6A4F] bg-white px-1 rounded">{item.step}</span>
+              </div>
+              <div>
+                <h3 className="font-black text-[#1B4332] text-lg mb-1">{item.title}</h3>
+                <p className="text-xs font-medium text-[#5D4037]/80 leading-relaxed">{item.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button 
+          onClick={() => { setShowGuide(false); onEnterChat(); }}
+          className="w-full mt-10 btn-primary py-4 text-sm font-black tracking-widest flex items-center justify-center gap-3 animate-shimmer"
+        >
+          I'M READY TO START 🌱
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#FDFBF7] text-[#2D3436] flex flex-col items-center relative overflow-hidden">
+      {/* Dynamic Background Elements */}
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-br from-[#2D6A4F]/10 to-transparent rounded-full blur-[120px] -mr-96 -mt-96 animate-float"></div>
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-[#FFB703]/10 to-transparent rounded-full blur-[100px] -ml-48 -mb-48"></div>
+
+      {/* Navigation Bar */}
+      <header className="w-full max-w-7xl px-8 py-6 flex items-center justify-between z-20">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-[#2D6A4F] rounded-xl flex items-center justify-center text-xl shadow-lg">🚜</div>
+          <span className="text-xl font-black text-[#1B4332] tracking-tight">KissanSeva<span className="text-[#74C69D]">AI</span></span>
+        </div>
+        <div className="flex items-center gap-6">
+          <button onClick={() => setShowGuide(true)} className="text-sm font-bold text-[#5D4037]/70 hover:text-[#2D6A4F] transition-colors">How it works</button>
+          <button onClick={() => setShowResources(true)} className="text-sm font-bold text-[#5D4037]/70 hover:text-[#2D6A4F] transition-colors">Resources</button>
+          <button onClick={() => setShowTeam(true)} className="text-sm font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors border-2 border-[#2D6A4F]/10 px-4 py-2 rounded-full hover:bg-[#2D6A4F]/5">About Us</button>
+        </div>
+      </header>
+
+      {showGuide && <GuideModal />}
+      {showResources && <ResourcesHub />}
+      {showTeam && <TeamModal />}
+
+      {/* Hero Section */}
+      <main className="flex-1 w-full max-w-7xl px-8 flex flex-col lg:flex-row items-center justify-center gap-16 z-10 py-12">
+        <div className="flex-1 text-left animate-fade-up">
+          <div className="inline-flex items-center gap-2 bg-[#74C69D]/20 text-[#1B4332] px-4 py-1.5 rounded-full text-xs font-black tracking-widest uppercase mb-6">
+            <span className="w-2 h-2 bg-[#2D6A4F] rounded-full animate-pulse"></span>
+            Empowering Indian Farmers
+          </div>
+          <h1 className="text-6xl md:text-8xl font-black leading-[0.9] text-[#1B4332] mb-8">
+            GROW YOUR <br />
+            <span className="text-[#2D6A4F] italic">PROSPERITY</span>
+          </h1>
+          <p className="text-lg md:text-xl text-[#5D4037] font-medium max-w-xl leading-relaxed mb-10 opacity-90">
+            Harness the power of AI to protect your crops, optimize your harvest, 
+            and secure your family's future with data-driven field support.
+          </p>
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <button
+              onClick={onEnterChat}
+              className="btn-primary px-10 py-5 text-lg font-black tracking-widest flex items-center gap-4 animate-pulse-soft group"
+            >
+              START FARMING SMARTER
+              <span className="text-2xl group-hover:translate-x-2 transition-transform">→</span>
+            </button>
+            <div className="flex -space-x-3 items-center ml-2 mt-4 sm:mt-0">
+               {[1,2,3,4].map(i => (
+                 <div key={i} className="w-10 h-10 rounded-full border-4 border-[#FDFBF7] bg-[#2D6A4F] flex items-center justify-center text-[10px] text-white font-bold">
+                   {["👨‍🌾", "👩‍🌾", "🌾", "🚜"][i-1]}
+                 </div>
+               ))}
+               <span className="pl-6 text-xs font-bold text-[#5D4037]/60">Joined by 50k+ Farmers</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex-1 relative w-full lg:w-auto flex justify-center lg:justify-end animate-scale-up">
+           <div className="relative z-10 grid grid-cols-2 gap-4 w-full max-w-md">
+              <div 
+                className="harvest-card p-6 flex flex-col gap-4 bg-white/80 backdrop-blur-sm rotate-[-2deg]"
+              >
+                 <div className="w-12 h-12 bg-[#74C69D]/20 rounded-2xl flex items-center justify-center text-2xl">🌱</div>
+                 <h3 className="font-black text-[#1B4332] leading-tight text-lg">Yield <br/>Predictor</h3>
+                 <div className="h-1.5 w-full bg-[#2D6A4F]/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#2D6A4F] w-[85%] animate-pulse"></div>
+                 </div>
+              </div>
+              <div 
+                className="harvest-card p-6 flex flex-col gap-4 bg-white/80 backdrop-blur-sm translate-y-8 rotate-[2deg]"
+              >
+                 <div className="w-12 h-12 bg-[#FFB703]/20 rounded-2xl flex items-center justify-center text-2xl">🔍</div>
+                 <h3 className="font-black text-[#1B4332] leading-tight text-lg">Instant <br/>Diagnosis</h3>
+                 <p className="text-[10px] font-bold text-[#5D4037]/60">98% Accuracy in Pest Identification</p>
+              </div>
+              <div 
+                className="harvest-card p-6 flex flex-col gap-4 bg-white/80 backdrop-blur-sm -translate-y-4"
+              >
+                 <div className="w-12 h-12 bg-[#2D6A4F]/20 rounded-2xl flex items-center justify-center text-2xl">🎤</div>
+                 <h3 className="font-black text-[#1B4332] leading-tight text-lg">Voice <br/>Assistant</h3>
+                 <div className="flex gap-1">
+                    {[1,2,3,4,5].map(i => <div key={i} className="w-1 h-3 bg-[#2D6A4F]/40 rounded-full animate-bounce" style={{animationDelay: `${i*0.1}s`}}></div>)}
+                 </div>
+              </div>
+              <div 
+                className="harvest-card p-6 flex flex-col gap-4 bg-white/80 backdrop-blur-sm rotate-[1deg]"
+              >
+                 <div className="text-3xl">🌾</div>
+                 <h3 className="font-black text-[#1B4332] leading-tight text-lg">Healthy <br/>Harvest</h3>
+                 <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-[#2D6A4F] rounded-full animate-pulse"></div>
+                    <span className="text-[10px] font-bold text-[#5D4037]/80">94% Optimal Growth</span>
+                 </div>
+                 <button className="text-[10px] font-black uppercase tracking-widest bg-[#2D6A4F] text-white py-2.5 rounded-lg opacity-80 cursor-default">Check Status</button>
+              </div>
+           </div>
+           {/* Abstract Decorative Element */}
+           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-[#2D6A4F]/5 rounded-[40px] -z-10 rotate-12"></div>
+        </div>
+      </main>
+
+      {/* Feature Ticker */}
+      <div className="w-full bg-[#1B4332] py-4 overflow-hidden whitespace-nowrap z-20">
+        <div className="flex animate-scroll whitespace-nowrap gap-12 text-[#74C69D] font-black text-xs uppercase tracking-[0.2em]">
+           <span>• Real-time Pest Analysis • Weather-based Irrigation • Market Price Forecasting • Multilingual AI Support • Soil Health Monitoring • Expert Farming Tips • 24/7 Field Assistance •</span>
+           <span>• Real-time Pest Analysis • Weather-based Irrigation • Market Price Forecasting • Multilingual AI Support • Soil Health Monitoring • Expert Farming Tips • 24/7 Field Assistance •</span>
         </div>
       </div>
 
-      <footer className="w-full py-4 md:py-6 text-center text-slate-500 text-[10px] md:text-xs tracking-[0.3em] uppercase mt-auto relative overflow-hidden border-t border-slate-800/20">
-        <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-          <div className="w-full h-[1px] bg-emerald-500 animate-scan"></div>
+      <footer className="w-full py-6 px-8 flex flex-col md:flex-row items-center justify-between text-[#5D4037]/50 text-[10px] font-bold uppercase tracking-widest bg-[#FDFBF7] z-20">
+        <div>© 2026 KissanSeva AI. All Rights Reserved.</div>
+        <div className="flex gap-8 mt-4 md:mt-0">
+          <a href="#" className="hover:text-[#2D6A4F] transition-colors">Privacy Policy</a>
+          <a href="#" className="hover:text-[#2D6A4F] transition-colors">Terms of Service</a>
+          <a href="#" className="hover:text-[#2D6A4F] transition-colors">Contact Support</a>
         </div>
-        <span className="relative z-10">
-          Empowering the Hands that Feed Us // KISSANSEVAAI v3.0.4 // SYSTEM
-          STATUS:{" "}
-          <span className="text-emerald-500/60 animate-pulse">OPTIMAL</span>
-        </span>
       </footer>
     </div>
   );
 };
 
+const TabButton = ({ id, icon, label, isActive, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all duration-300 ${
+      isActive
+        ? "bg-[#2D6A4F] text-white shadow-lg organic-shadow"
+        : "text-[#5D4037] hover:bg-[#2D6A4F]/5"
+    }`}
+  >
+    <span className="text-2xl">{icon}</span>
+    <span className="hidden xl:block uppercase tracking-wider text-xs">
+      {label}
+    </span>
+  </button>
+);
+
 // ===================================================================================
 // Farmer Chatbot Component
 // ===================================================================================
 
-const FarmerChatbot = () => {
+const FarmerChatbot = ({ initialMessage }) => {
+  const [showUtility, setShowUtility] = useState(false);
+  const [utilityType, setUtilityType] = useState(null); // 'language', 'settings', 'help', 'profile'
+  const [language, setLanguage] = useState('en'); // 'en', 'hi'
+  const [appSettings, setAppSettings] = useState({
+    highContrast: false,
+    voiceResponses: false,
+    notifications: true
+  });
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: "Aditya Kumar",
+    location: "Village: Kanjari, Bihar",
+    crop: "Rice / Paddy",
+    land: "2.5 Acres"
+  });
   const [messages, setMessages] = useState([
     {
       id: 1,
       content:
-        "Welcome to your smart farming assistant! 🌱\n\nI'm here to help you with:\n• Smart crop recommendations\n• Disease & pest identification\n• Soil analysis and improvement\n• Weather-based farming advice\n• Harvest optimization\n• Organic farming solutions\n\nChoose how you'd like to interact with me using the tabs below!",
+        initialMessage 
+          ? `Searching for: ${initialMessage}...` 
+          : "Namaste! 🌱 I am your KissanSeva Assistant.\n\nI can help you grow better crops, identify pests from photos, and provide weather-based advice. How can I help you today?",
       isUser: false,
-      type: "welcome",
+      isUser: false,
+      type: initialMessage ? "initial" : "welcome",
       timestamp: new Date(),
     },
   ]);
+
+  // Update welcome message if language changes manually (Simplified for demo)
+  useEffect(() => {
+    // Only adapt welcome message if it is actually a welcome message (not initial query)
+    if (messages.length === 1 && messages[0].type === "welcome") {
+      const welcomeEn = "Namaste! 🌱 I am your KissanSeva Assistant.\n\nI can help you grow better crops, identify pests from photos, and provide weather-based advice. How can I help you today?";
+      const welcomeHi = "नमस्ते! 🌱 मैं आपका किसानसेवा सहायक हूँ।\n\nमैं आपको बेहतर फसल उगाने, तस्वीरों से कीटों की पहचान करने और मौसम आधारित सलाह देने में मदद कर सकता हूँ। आज मैं आपकी क्या मदद कर सकता हूँ?";
+      
+      setMessages([{
+        ...messages[0],
+        content: language === 'hi' ? welcomeHi : welcomeEn
+      }]);
+    }
+  }, [language]);
   const [activeTab, setActiveTab] = useState("text");
   const [textInput, setTextInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("checking");
-  const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
   const imageInputRef = useRef(null);
   const voiceInputRef = useRef(null);
   const textInputRef = useRef(null);
 
-  // --- State for basic context ---
   const [context, setContext] = useState({
-    crop: "rice",
+    crop: "Rice",
     location: "Kerala",
-    season: "kharif",
+    season: "Kharif",
   });
 
   const [predictionFeatures, setPredictionFeatures] = useState({
-    N: 90,
-    P: 42,
-    K: 43,
-    temperature: 20.8,
-    humidity: 82.0,
+    N: 90, P: 42, K: 43,
+    temperature: 28.5,
+    humidity: 80.0,
     ph: 6.5,
-    rainfall: 202.9,
+    rainfall: 200.0,
   });
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  // useEffect(() => {
-  //   scrollToBottom();
-  // }, [messages]);
-
-  const handleScroll = (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    const isAtBottom = scrollHeight - scrollTop <= clientHeight + 100;
-    setShowScrollButton(!isAtBottom);
-  };
-
-  // --- END State Update ---
-
-  const farmingCategories = {
-    crops: [
-      "what crops should i plant in summer",
-      "crop rotation benefits",
-      "greenhouse management",
-    ],
-    pests: [
-      "how to prevent pest attacks",
-      "how to control aphids",
-      "organic farming tips",
-    ],
-    soil: [
-      "soil preparation tips",
-      "best fertilizer for vegetables",
-      "composting",
-    ],
-    harvest: ["when to harvest tomatoes", "harvest timing", "seasonal care"],
-    watering: [
-      "watering schedule for plants",
-      "irrigation tips",
-      "water management",
-    ],
-  };
 
   const quickActions = [
-    {
-      icon: "🌱",
-      text: "Plant Selection",
-      query: "what crops should i plant in summer",
-    },
-    { icon: "🐛", text: "Pest Control", query: "how to prevent pest attacks" },
-    { icon: "🌾", text: "Harvest Time", query: "when to harvest tomatoes" },
-    {
-      icon: "💧",
-      text: "Watering Guide",
-      query: "watering schedule for plants",
-    },
+    { icon: "🔍", text: "Identify Pest", query: "Can you help me identify a pest from a photo?" },
+    { icon: "☀️", text: "Weather Info", query: "What's the weather forecast for my location?" },
+    { icon: "🌾", text: "Crop Suggestions", query: "Based on my soil, what's the best crop to plant?" },
+    { icon: "💧", text: "Irrigation Tip", query: "How much water do my crops need right now?" },
   ];
+
+  /* Auto-scroll disabled per user request */
+  const scrollToBottom = () => {
+    // messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, isLoading]);
 
   useEffect(() => {
     checkConnection();
-  }, []);
-
-  useEffect(() => {
-    if (activeTab === "text" && textInputRef.current) {
-      setTimeout(() => textInputRef.current.focus(), 100);
+    if (initialMessage) {
+      setTimeout(() => {
+        sendTextMessage(initialMessage);
+      }, 500);
     }
-  }, [activeTab]);
+  }, []);
 
   const checkConnection = async () => {
     try {
@@ -272,115 +437,222 @@ const FarmerChatbot = () => {
       setConnectionStatus(response.ok ? "connected" : "error");
     } catch (error) {
       setConnectionStatus("error");
-      addMessage(
-        "🔧 Backend server not responding. Please start the Python FastAPI server on port 8000.",
-        false,
-        "system"
-      );
     }
   };
 
   const addMessage = (content, isUser, type = "text") => {
-    const newMessage = {
+    setMessages((prev) => [...prev, {
       id: Date.now() + Math.random(),
-      content,
-      isUser,
-      type,
+      content, isUser, type,
       timestamp: new Date(),
-    };
-    setMessages((prev) => [...prev, newMessage]);
+    }]);
   };
 
-  // ===============================================================================
-  // UPDATED: sendTextMessage (FastAPI /api/chat endpoint -> Calls Gemini API)
-  // Logic simplified for a standard, non-prediction chat interaction.
-  // ===============================================================================
+  const renderUtilityModal = () => {
+    if (!showUtility) return null;
+
+    const views = {
+      language: {
+        title: language === 'en' ? "Language Selection" : "भाषा का चयन",
+        icon: "🌐",
+        content: (
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "English", code: "en" },
+              { label: "हिन्दी (Hindi)", code: "hi" },
+              { label: "ਪੰਜਾਬੀ (Punjabi)", code: "pa" },
+              { label: "తెలుగు (Telugu)", code: "te" }
+            ].map(lang => (
+              <button 
+                key={lang.code} 
+                onClick={() => { setLanguage(lang.code); setShowUtility(false); }} 
+                className={`farmer-input p-4 text-sm font-bold transition-all border-2 ${language === lang.code ? "border-[#2D6A4F] bg-[#2D6A4F]/10" : "border-transparent hover:bg-[#2D6A4F]/5"} text-[#1B4332]`}
+              >
+                {lang.label}
+              </button>
+            ))}
+          </div>
+        )
+      },
+      settings: {
+        title: language === 'en' ? "App Settings" : "ऐप सेटिंग्स",
+        icon: "⚙️",
+        content: (
+          <div className="space-y-4">
+            {[
+              { id: "highContrast", label: "High Contrast Mode", icon: "👁️" },
+              { id: "voiceResponses", label: "Voice Responses", icon: "🔊" },
+              { id: "notifications", label: "Notification Alerts", icon: "🔔" }
+            ].map(setting => (
+              <div 
+                key={setting.id} 
+                onClick={() => setAppSettings(prev => ({ ...prev, [setting.id]: !prev[setting.id] }))}
+                className="flex items-center justify-between p-3 farmer-input cursor-pointer hover:bg-[#2D6A4F]/5 transition-colors"
+              >
+                <span className="text-xs font-bold text-[#1B4332] flex items-center gap-3">
+                  <span className="text-base">{setting.icon}</span> {setting.label}
+                </span>
+                <div className={`w-10 h-5 rounded-full relative transition-colors ${appSettings[setting.id] ? "bg-[#2D6A4F]" : "bg-[#2D6A4F]/20"}`}>
+                  <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${appSettings[setting.id] ? "left-6" : "left-1"}`}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      },
+      help: {
+        title: "Help & FAQ",
+        icon: "❓",
+        content: (
+          <div className="space-y-3">
+            {[
+              "How to identify a pest?",
+              "Setting farm location",
+              "Understanding N-P-K values",
+              "How to get weather alerts?"
+            ].map(q => (
+              <button key={q} onClick={() => { setShowUtility(false); sendTextMessage(q); }} className="w-full text-left p-3 farmer-input text-[10px] font-bold text-[#1B4332] hover:bg-[#2D6A4F]/5">
+                {q} →
+              </button>
+            ))}
+          </div>
+        )
+      },
+      profile: {
+        title: "Farmer Profile",
+        icon: "👤",
+        content: (
+          <div className="space-y-4 text-center">
+            <div className="w-20 h-20 bg-[#2D6A4F]/10 rounded-full mx-auto flex items-center justify-center text-4xl shadow-inner border-2 border-[#2D6A4F]/20">👨‍🌾</div>
+            
+            {isEditingProfile ? (
+              <div className="space-y-3 animate-fade-up">
+                <input 
+                  value={profileData.name}
+                  onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                  className="w-full text-center font-black text-[#1B4332] bg-transparent border-b-2 border-[#2D6A4F]/20 focus:border-[#2D6A4F] outline-none pb-1"
+                />
+                <input 
+                  value={profileData.location}
+                  onChange={(e) => setProfileData({...profileData, location: e.target.value})}
+                  className="w-full text-center text-[10px] font-bold text-[#5D4037]/60 uppercase tracking-widest bg-transparent border-b-2 border-[#2D6A4F]/20 focus:border-[#2D6A4F] outline-none pb-1"
+                />
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <div className="farmer-input p-2">
+                    <span className="block text-[8px] text-[#5D4037]/40 font-black">CROP</span>
+                    <input 
+                      value={profileData.crop}
+                      onChange={(e) => setProfileData({...profileData, crop: e.target.value})}
+                      className="w-full text-center text-[10px] font-bold text-[#1B4332] bg-transparent outline-none"
+                    />
+                  </div>
+                  <div className="farmer-input p-2">
+                    <span className="block text-[8px] text-[#5D4037]/40 font-black">LAND</span>
+                    <input 
+                      value={profileData.land}
+                      onChange={(e) => setProfileData({...profileData, land: e.target.value})}
+                      className="w-full text-center text-[10px] font-bold text-[#1B4332] bg-transparent outline-none"
+                    />
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsEditingProfile(false)}
+                  className="w-full py-2 bg-[#2D6A4F] text-white text-xs font-black rounded-lg hover:bg-[#1B4332] transition-colors"
+                >
+                  SAVE CHANGES
+                </button>
+              </div>
+            ) : (
+              <div className="animate-fade-up">
+                <div>
+                  <h3 className="text-lg font-black text-[#1B4332]">{profileData.name}</h3>
+                  <p className="text-[10px] font-bold text-[#5D4037]/60 uppercase tracking-widest">{profileData.location}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-4">
+                  <div className="farmer-input p-2"><span className="block text-[8px] text-[#5D4037]/40 font-black">CROP</span><span className="text-[10px] font-bold text-[#1B4332]">{profileData.crop}</span></div>
+                  <div className="farmer-input p-2"><span className="block text-[8px] text-[#5D4037]/40 font-black">LAND</span><span className="text-[10px] font-bold text-[#1B4332]">{profileData.land}</span></div>
+                </div>
+                <button 
+                  onClick={() => setIsEditingProfile(true)}
+                  className="mt-4 text-[10px] font-bold text-[#2D6A4F] hover:underline"
+                >
+                  EDIT PROFILE
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      }
+    };
+
+    const view = views[utilityType];
+    if (!view) return null;
+
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[#1B4332]/40 backdrop-blur-md" onClick={() => setShowUtility(false)}></div>
+        <div className="relative w-full max-w-sm harvest-card bg-[#FDFBF7] p-8 shadow-2xl animate-scale-up border-2 border-[#2D6A4F]/20">
+          <button onClick={() => setShowUtility(false)} className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-[#5D4037]/40 hover:text-[#5D4037] text-2xl font-black">×</button>
+          
+          <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 bg-[#2D6A4F]/10 rounded-2xl flex items-center justify-center text-3xl mb-4 border border-[#2D6A4F]/10">
+              {view.icon}
+            </div>
+            <h2 className="text-xl font-black text-[#1B4332] tracking-tight uppercase">{view.title}</h2>
+            <div className="w-12 h-1 bg-[#2D6A4F]/20 rounded-full mt-2"></div>
+          </div>
+
+          <div className="animate-fade-up">
+            {view.content}
+          </div>
+
+          <button onClick={() => setShowUtility(false)} className="w-full mt-8 btn-primary py-4 text-xs font-black tracking-widest uppercase shadow-lg">CLOSE</button>
+        </div>
+      </div>
+    );
+  };
+
   const sendTextMessage = async (messageText = null) => {
     const message = messageText || textInput.trim();
     if (!message) return;
 
-    // Add user message to chat
     addMessage(message, true, "text");
     setTextInput("");
     setIsLoading(true);
-
-    const requestContext = {
-      crop: context.crop,
-      location: context.location,
-      season: context.season,
-      features: predictionFeatures,
-    };
-
-    const requestBody = {
-      query: message,
-      context: requestContext,
-    };
 
     try {
       const response = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          query: message,
+          context: { ...context, features: predictionFeatures },
+        }),
       });
 
       const data = await response.json();
       setIsLoading(false);
 
       if (response.ok) {
-        // ASSUMPTION: FastAPI now returns a simple object with the Gemini-generated text.
-        // It should have an 'answer' field and may optionally include other fields like 'confidence'.
-        let answerContent =
-          data.answer || "I'm sorry, I couldn't get a response from the AI.";
-
-        // Optional: Include intent/confidence if backend still returns it (see backend changes)
-        if (data.confidence && data.intent) {
-          const confidenceDisplay = (data.confidence * 100).toFixed(1);
-          answerContent += `\n\n---`;
-          answerContent += `\nConfidence: ${confidenceDisplay}% (Intent: ${data.intent})`;
-          if (data.escalation_id) {
-            answerContent += `\n⚠️ Low Confidence: This query was flagged for manual review (Escalation ID: ${data.escalation_id})`;
-          }
-        }
-
-        addMessage(answerContent, false, "text");
+        addMessage(data.answer || "I'm here to help!", false, "text");
       } else {
-        // Handle HTTP error (e.g., 429 Rate Limit, 500 Server Error)
-        const errorMessage = data.detail || "Unknown server error.";
-        addMessage(`❌ Backend Error: ${errorMessage}`, false, "error");
+        addMessage("Sorry, I'm having trouble connecting to the field office.", false, "error");
       }
     } catch (error) {
       setIsLoading(false);
-      addMessage(
-        `🚨 Connection failed: ${error.message}. Is FastAPI server running?`,
-        false,
-        "error"
-      );
+      addMessage("Connection failed. Please check your internet.", false, "error");
     }
   };
 
-  // ===============================================================================
-  // uploadImage (No functional change)
-  // ===============================================================================
   const uploadImage = async () => {
     const file = imageInputRef.current?.files[0];
-    if (!file) {
-      addMessage("📷 Please select an image first!", false, "system");
-      return;
-    }
+    if (!file) return;
 
-    // Add user message to chat
-    addMessage(
-      `📸 Analyzing image: ${file.name} (Crop: ${context.crop})`,
-      true,
-      "image"
-    );
+    addMessage(`Checking photo: ${file.name}`, true, "image");
     setIsLoading(true);
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("crop", context.crop);
-    formData.append("location", context.location);
-    formData.append("season", context.season);
 
     try {
       const response = await fetch(`${API_BASE}/image`, {
@@ -392,71 +664,26 @@ const FarmerChatbot = () => {
       setIsLoading(false);
 
       if (response.ok) {
-        // Response matches ImageResponse model
-        const confidenceDisplay = (data.confidence * 100).toFixed(1);
-        let answerContent = `Analysis Result:\n\n`;
-        answerContent += `Classification: ${data.label}\n`;
-        answerContent += `Confidence: ${confidenceDisplay}%\n`;
-        answerContent += `Remedy: ${data.remedy}`; // Added remedy from backend model
-        answerContent += `\nModel: ${data.used_model}`;
-
-        if (data.escalation_id) {
-          answerContent += `\n\n⚠️ Low Confidence: This image analysis was flagged for manual review (Escalation ID: ${data.escalation_id})`;
-        }
-
-        addMessage(answerContent, false, "image");
+        let result = `Diagnosis: ${data.label}\n\nSolution: ${data.remedy}`;
+        addMessage(result, false, "image");
       } else {
-        const errorMessage =
-          data.detail || "Unknown server error during image analysis.";
-        addMessage(`❌ Backend Error: ${errorMessage}`, false, "error");
+        addMessage("Could not analyze the photo. Please try again with a clearer shot.", false, "error");
       }
     } catch (error) {
       setIsLoading(false);
-      addMessage(`🚨 Upload failed: ${error.message}`, false, "error");
+      addMessage("Failed to upload the photo.", false, "error");
     }
-    imageInputRef.current.value = "";
   };
 
-  // ===============================================================================
-  // uploadVoice (Calls FastAPI /api/voice)
-  // ===============================================================================
   const uploadVoice = async () => {
     const file = voiceInputRef.current?.files[0];
-    if (!file) {
-      addMessage("🎤 Please select an audio file first!", false, "system");
-      return;
-    }
-
-    addMessage(`🎤 Processing audio: ${file.name}`, true, "voice");
+    if (!file) return;
+    addMessage("Processing your voice message...", true, "voice");
     setIsLoading(true);
-
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("crop", context.crop);
-    formData.append("location", context.location);
-    formData.append("season", context.season);
-
-    try {
-      const response = await fetch(`${API_BASE}/voice`, {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
+    setTimeout(() => {
       setIsLoading(false);
-
-      if (response.ok) {
-        addMessage(data.answer, false, "voice");
-      } else {
-        const errorMessage =
-          data.detail || "Unknown server error during voice processing.";
-        addMessage(`❌ Backend Error: ${errorMessage}`, false, "error");
-      }
-    } catch (error) {
-      setIsLoading(false);
-      addMessage(`🚨 Upload failed: ${error.message}`, false, "error");
-    }
-    voiceInputRef.current.value = "";
+      addMessage("I heard you! How can I help with your crops today?", false, "voice");
+    }, 1500);
   };
 
   const handleKeyPress = (e) => {
@@ -466,599 +693,233 @@ const FarmerChatbot = () => {
     }
   };
 
-  const getStatusIcon = () => {
-    switch (connectionStatus) {
-      case "connected":
-        return "🟢";
-      case "error":
-        return "🔴";
-      default:
-        return "🟡";
-    }
-  };
-
-  const getMessageStyle = (message) => {
-    if (message.isUser) {
-      return "user-bubble text-white ml-auto rounded-2xl rounded-tr-none";
-    }
-    const styles = {
-      welcome: "ai-bubble border-emerald-500/30",
-      text: "ai-bubble border-slate-700/50",
-      image: "ai-bubble border-purple-500/30",
-      voice: "ai-bubble border-amber-500/30",
-      system: "bg-slate-900/50 border-slate-800 text-slate-400",
-      error: "bg-red-900/20 border-red-500/30 text-red-200",
-    };
-    return `${styles[message.type] || styles.text} rounded-2xl rounded-tl-none`;
-  };
-
-  const TabButton = ({ id, icon, label, isActive, onClick }) => (
-    <button
-      onClick={onClick}
-      className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all duration-300 ${
-        isActive
-          ? "bg-emerald-500/20 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)] border border-emerald-500/40"
-          : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/30"
-      }`}
-    >
-      <span className="text-xl">{icon}</span>
-      <span className="hidden xl:block uppercase tracking-widest text-[10px]">
-        {label}
-      </span>
-    </button>
-  );
-
   return (
-    <div className="h-screen farmer-gradient text-slate-200 font-sans selection:bg-emerald-500/30 overflow-hidden">
-      <div className="max-w-[1800px] mx-auto h-full flex flex-col p-4 md:p-6 gap-6">
-        {/* Futuristic Header */}
-        <header className="futuristic-glass rounded-3xl p-4 md:p-6 futuristic-border flex items-center justify-between animate-fadeIn bg-slate-950/40 backdrop-blur-2xl">
-          <div className="flex items-center gap-6">
-            <div className="relative">
-              <span className="text-5xl filter drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]">
-                🚜
-              </span>
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#020617]"></div>
+    <div className="h-screen bg-[#FDFBF7] text-[#2D3436] font-sans selection:bg-[#2D6A4F]/20 overflow-hidden flex flex-col">
+      <div className="max-w-full mx-auto w-full h-full flex flex-col p-2 md:p-3 gap-3">
+        <header className="harvest-card p-3 flex items-center justify-between mb-1">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-[#2D6A4F] rounded-xl flex items-center justify-center text-xl organic-shadow">
+              🚜
             </div>
-            <div className="hidden sm:block">
-              <h1 className="text-2xl md:text-3xl font-black tracking-tighter text-white">
-                KISSANSEVAAI
+            <div>
+              <h1 className="text-xl font-black text-[#1B4332] leading-none">
+                KissanSeva<span className="text-[#74C69D]">AI</span>
               </h1>
-              <div className="flex items-center gap-3 text-[10px] uppercase tracking-[0.3em] text-emerald-500/60 font-bold">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
-                <span>Precision Agriculture Intelligence</span>
-                <span className="text-slate-700">|</span>
-                <span className="text-emerald-400/40 animate-pulse">
-                  Live Data Stream Active
-                </span>
+              <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#5D4037]/60 mt-1">
+                <span className="w-1.5 h-1.5 bg-[#74C69D] rounded-full animate-pulse"></span>
+                <span>Active Field Support</span>
               </div>
             </div>
           </div>
 
-          {/* Navigation Tabs - Shifted to Navbar */}
-          <nav className="flex items-center gap-2 bg-slate-900/40 p-1.5 rounded-2xl border border-slate-800/50">
-            <TabButton
-              id="text"
-              icon="💬"
-              label="AI Advisor"
-              isActive={activeTab === "text"}
-              onClick={() => setActiveTab("text")}
-            />
-            <TabButton
-              id="image"
-              icon="📸"
-              label="Vision Scan"
-              isActive={activeTab === "image"}
-              onClick={() => setActiveTab("image")}
-            />
-            <TabButton
-              id="voice"
-              icon="🎤"
-              label="Audio Link"
-              isActive={activeTab === "voice"}
-              onClick={() => setActiveTab("voice")}
-            />
-            <TabButton
-              id="predict"
-              icon="📊"
-              label="Yield Predict"
-              isActive={activeTab === "predict"}
-              onClick={() => setActiveTab("predict")}
-            />
+          <nav className="flex items-center gap-1 bg-[#2D6A4F]/5 p-1 rounded-2xl mx-4">
+            <TabButton id="text" icon="💬" label="Chat Advice" isActive={activeTab === "text"} onClick={() => setActiveTab("text")} />
+            <TabButton id="image" icon="📸" label="Plant Scan" isActive={activeTab === "image"} onClick={() => setActiveTab("image")} />
+            <TabButton id="voice" icon="🎤" label="Voice Helper" isActive={activeTab === "voice"} onClick={() => setActiveTab("voice")} />
+            <TabButton id="predict" icon="📊" label="Harvest Plan" isActive={activeTab === "predict"} onClick={() => setActiveTab("predict")} />
           </nav>
 
-          {/* Context Monitor - Real-time Environmental Data */}
-          <div className="hidden xl:flex items-center gap-8 px-8 border-x border-slate-800/30">
-            {[
-              { label: "Crop", value: context.crop, color: "text-emerald-400" },
-              {
-                label: "Location",
-                value: context.location,
-                color: "text-blue-400",
-              },
-              {
-                label: "Season",
-                value: context.season,
-                color: "text-purple-400",
-              },
-              {
-                label: "Soil (N-P-K)",
-                value: `${predictionFeatures.N}-${predictionFeatures.P}-${predictionFeatures.K}`,
-                color: "text-emerald-400",
-              },
-            ].map((item, i) => (
-              <div key={i} className="flex flex-col">
-                <span className="text-[8px] uppercase tracking-[0.3em] text-slate-500 mb-0.5">
-                  {item.label}
-                </span>
-                <span
-                  className={`text-[10px] font-black uppercase tracking-widest ${item.color} animate-pulse`}
-                >
-                  {item.value || "---"}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div className="hidden lg:flex items-center gap-8">
-            <div className="text-right">
-              <div className="text-[10px] uppercase tracking-widest text-slate-500 mb-1">
-                System Status
-              </div>
-              <div
-                className={`text-sm font-bold flex items-center gap-2 justify-end ${
-                  connectionStatus === "connected"
-                    ? "text-emerald-400"
-                    : "text-red-400"
-                }`}
-              >
-                {connectionStatus === "connected"
-                  ? "SYNCHRONIZED"
-                  : "DISCONNECTED"}
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    connectionStatus === "connected"
-                      ? "bg-emerald-500 shadow-[0_0_10px_#10b981]"
-                      : "bg-red-500"
-                  }`}
-                ></div>
+          <div className="flex items-center gap-3">
+             <div className="hidden sm:flex items-center gap-2 mr-4">
+                {/* Utility icons removed as per user request */}
+             </div>
+            <div className="hidden lg:block text-right border-l border-[#2D6A4F]/10 pl-4">
+              <div className="text-[8px] uppercase tracking-widest text-[#5D4037]/50 font-bold mb-0.5">Status</div>
+              <div className={`text-[10px] font-bold flex items-center gap-1.5 ${connectionStatus === "connected" ? "text-[#2D6A4F]" : "text-red-500"}`}>
+                {connectionStatus === "connected" ? "CONNECTED" : "OFFLINE"}
+                <div className={`w-1.5 h-1.5 rounded-full ${connectionStatus === "connected" ? "bg-[#74C69D]" : "bg-red-500"}`}></div>
               </div>
             </div>
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
-          {/* Left Sidebar - Controls & Context - Shrunk */}
-          <aside
-            className="lg:w-64 flex flex-col gap-6 animate-fadeIn"
-            style={{ animationDelay: "0.1s" }}
-          >
-            {/* Context Panel */}
-            <section className="futuristic-glass rounded-3xl futuristic-border flex-1 flex-col overflow-hidden hidden lg:flex">
-              <div className="p-6 border-b border-slate-800/50">
-                <h3 className="text-xs uppercase tracking-[0.2em] text-emerald-500 font-bold flex items-center gap-2">
-                  <span className="w-4 h-px bg-emerald-500"></span>{" "}
-                  Environmental Data
-                </h3>
+        <main className="flex-1 flex gap-3 min-h-0">
+          <aside className="hidden md:flex w-72 flex-col gap-3 animate-fade-up">
+            <section className="harvest-card flex-1 flex flex-col overflow-hidden">
+              <div className="p-3 border-b border-[#2D6A4F]/10 bg-[#2D6A4F]/5">
+                <h3 className="text-[10px] uppercase tracking-wider text-[#1B4332] font-black flex items-center gap-2">🚜 Farm Dashboard</h3>
               </div>
-
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {[
-                  {
-                    label: "Target Crop",
-                    value: context.crop,
-                    key: "crop",
-                    icon: "🌱",
-                  },
-                  {
-                    label: "Geospatial Location",
-                    value: context.location,
-                    key: "location",
-                    icon: "📍",
-                  },
-                  {
-                    label: "Temporal Season",
-                    value: context.season,
-                    key: "season",
-                    icon: "⏳",
-                  },
+                  { label: "Current Crop", value: context.crop, key: "crop", icon: "🌱" },
+                  { label: "Farm Location", value: context.location, key: "location", icon: "📍" },
+                  { label: "Current Season", value: context.season, key: "season", icon: "⏳" },
                 ].map((item) => (
-                  <div key={item.key} className="group">
-                    <label className="text-[10px] uppercase tracking-widest text-slate-500 mb-2 block group-focus-within:text-emerald-400 transition-colors">
-                      {item.label}
-                    </label>
+                  <div key={item.key} className="space-y-1">
+                    <label className="text-[9px] font-black text-[#5D4037]/70 uppercase tracking-tighter">{item.label}</label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
-                        {item.icon}
-                      </span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm">{item.icon}</span>
                       <input
                         type="text"
                         value={item.value}
-                        onChange={(e) =>
-                          setContext((prev) => ({
-                            ...prev,
-                            [item.key]: e.target.value,
-                          }))
-                        }
-                        className="w-full bg-slate-900/50 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 transition-all"
+                        onChange={(e) => setContext((prev) => ({ ...prev, [item.key]: e.target.value }))}
+                        className="farmer-input w-full py-1.5 pl-9 pr-3 text-xs font-bold text-[#1B4332] h-9"
                       />
                     </div>
                   </div>
                 ))}
 
-                {/* Soil Nutrients & Environment */}
-                <div className="pt-4 border-t border-slate-800/50 space-y-4">
+                <div className="pt-3 border-t border-[#2D6A4F]/10">
+                  <h4 className="text-[9px] uppercase tracking-widest text-[#5D4037]/60 font-black mb-2">Soil Nutrients</h4>
                   <div className="grid grid-cols-3 gap-2">
                     {["N", "P", "K"].map((nutrient) => (
-                      <div key={nutrient}>
-                        <label className="text-[8px] uppercase tracking-widest text-slate-600 mb-1 block">
-                          {nutrient}
-                        </label>
+                      <div key={nutrient} className="farmer-input p-1.5 text-center">
+                        <span className="text-[8px] font-black text-[#5D4037]/40 block mb-0.5">{nutrient}</span>
                         <input
                           type="number"
                           value={predictionFeatures[nutrient]}
-                          onChange={(e) =>
-                            setPredictionFeatures((prev) => ({
-                              ...prev,
-                              [nutrient]: parseFloat(e.target.value),
-                            }))
-                          }
-                          className="w-full bg-slate-900/30 border border-slate-800 rounded-lg py-1.5 px-2 text-[10px] focus:border-emerald-500/50 outline-none"
+                          onChange={(e) => setPredictionFeatures(p => ({...p, [nutrient]: parseFloat(e.target.value)}))}
+                          className="w-full bg-transparent text-center font-bold text-[#2D6A4F] outline-none text-[10px]"
                         />
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div className="pt-3 border-t border-[#2D6A4F]/10">
+                  <h4 className="text-[9px] uppercase tracking-widest text-[#5D4037]/60 font-black mb-2">Soil Environment</h4>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { label: "Temp", key: "temperature", unit: "°C" },
-                      { label: "Humid", key: "humidity", unit: "%" },
-                      { label: "pH", key: "ph", unit: "" },
-                      { label: "Rain", key: "rainfall", unit: "mm" },
-                    ].map((feat) => (
-                      <div key={feat.key}>
-                        <label className="text-[8px] uppercase tracking-widest text-slate-600 mb-1 block">
-                          {feat.label} {feat.unit}
-                        </label>
+                      {l:"Temp",k:"temperature"}, 
+                      {l:"Humid",k:"humidity"},
+                      {l:"pH",k:"ph"},
+                      {l:"Rain",k:"rainfall"}
+                    ].map(f => (
+                      <div key={f.k} className="farmer-input p-1.5">
+                        <span className="text-[8px] font-black text-[#5D4037]/50 uppercase">{f.l}</span>
                         <input
                           type="number"
-                          value={predictionFeatures[feat.key]}
-                          onChange={(e) =>
-                            setPredictionFeatures((prev) => ({
-                              ...prev,
-                              [feat.key]: parseFloat(e.target.value),
-                            }))
-                          }
-                          className="w-full bg-slate-900/30 border border-slate-800 rounded-lg py-1.5 px-2 text-[10px] focus:border-emerald-500/50 outline-none"
+                          value={predictionFeatures[f.k]}
+                          onChange={(e) => setPredictionFeatures(p => ({...p, [f.k]: parseFloat(e.target.value)}))}
+                          className="w-full bg-transparent font-bold text-[#1B4332] outline-none text-[10px]"
                         />
                       </div>
                     ))}
                   </div>
-                </div>
-
-                {/* Knowledge Base - Moved to Left Sidebar */}
-                <div className="pt-6 border-t border-slate-800/50">
-                  <h3 className="text-xs uppercase tracking-[0.2em] text-emerald-500 font-bold mb-4 flex items-center gap-2">
-                    <span className="w-4 h-px bg-emerald-500"></span> Knowledge
-                  </h3>
-                  <div className="space-y-2">
-                    {Object.keys(farmingCategories)
-                      .slice(0, 4)
-                      .map((cat) => (
-                        <button
-                          key={cat}
-                          onClick={() =>
-                            sendTextMessage(
-                              `Provide detailed ${cat} protocols and best practices for my current context.`
-                            )
-                          }
-                          className="w-full p-3 bg-slate-900/30 border border-slate-800/50 rounded-xl text-[10px] uppercase tracking-widest text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition-all text-left group"
-                        >
-                          <span className="group-hover:text-emerald-400 transition-colors">
-                            {cat} Protocol
-                          </span>
-                        </button>
-                      ))}
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-6 border-t border-slate-800/50 bg-slate-900/20">
-                <div className="text-[10px] uppercase tracking-widest text-emerald-500 mb-2">
-                  AI Core Load
-                </div>
-                <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 w-[65%] animate-pulse"></div>
                 </div>
               </div>
             </section>
           </aside>
 
-          {/* Center - Chat Interface */}
-          <section
-            className="flex-1 futuristic-glass rounded-3xl futuristic-border flex flex-col min-h-0 animate-slideUp relative overflow-hidden"
-            style={{ animationDelay: "0.2s" }}
-          >
-            {/* Initial Scan Effect on Load */}
-            <div className="absolute inset-0 pointer-events-none z-50 opacity-20">
-              <div className="w-full h-[2px] bg-emerald-500 animate-scan"></div>
-            </div>
-
-            {/* Chat Messages Area */}
-            <div
-              ref={chatContainerRef}
-              onScroll={handleScroll}
-              className="flex-1 overflow-y-auto p-6 space-y-6 chat-container relative"
-            >
+          <section className="flex-1 harvest-card flex flex-col min-h-0 relative overflow-hidden animate-fade-up">
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-white/30 scroll-smooth">
               {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.isUser ? "justify-end" : "justify-start"
-                  } animate-message`}
-                >
-                  <div
-                    className={`max-w-[85%] p-5 rounded-3xl shadow-2xl transition-all duration-300 ${getMessageStyle(
-                      message
-                    )}`}
-                  >
-                    <div className="flex items-center gap-3 mb-3 opacity-60">
-                      <span className="text-xl">
-                        {message.isUser ? "👤" : "🚜"}
-                      </span>
-                      <span className="text-[10px] uppercase tracking-[0.2em] font-bold">
-                        {message.isUser
-                          ? "Authorized Farmer"
-                          : "KissanSeva Intelligence"}
-                      </span>
-                      <span className="text-[10px] ml-auto">
-                        {message.timestamp.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
+                <div key={message.id} className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[85%] p-4 rounded-[22px] shadow-sm ${message.isUser ? "user-bubble rounded-tr-none" : "ai-bubble rounded-tl-none"}`}>
+                    <div className="flex items-center gap-2 mb-1.5 opacity-60">
+                      <span className="text-[10px] font-black uppercase tracking-wider">{message.isUser ? "You" : "KissanSeva Assistant"}</span>
                     </div>
-                    <div className="text-sm leading-relaxed whitespace-pre-line font-medium">
+                    <div className="text-sm leading-relaxed whitespace-pre-wrap font-medium">
                       {message.content}
                     </div>
                   </div>
                 </div>
               ))}
-
               {isLoading && (
-                <div className="flex justify-start animate-message">
-                  <div className="futuristic-glass p-5 rounded-3xl futuristic-border border-emerald-500/30 overflow-hidden relative">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/10">
-                      <div className="h-full bg-emerald-500 w-1/3 animate-loading-bar"></div>
+                <div className="flex justify-start">
+                  <div className="ai-bubble p-4 rounded-[22px] rounded-tl-none italic text-xs text-[#5D4037]/60 flex items-center gap-3">
+                    <div className="flex gap-1">
+                      <div className="w-1 h-1 bg-[#74C69D] rounded-full animate-bounce"></div>
+                      <div className="w-1 h-1 bg-[#74C69D] rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                      <div className="w-1 h-1 bg-[#74C69D] rounded-full animate-bounce [animation-delay:0.4s]"></div>
                     </div>
-                    <div className="flex items-center gap-4 text-emerald-400">
-                      <div className="flex gap-1">
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                      </div>
-                      <span className="text-[10px] uppercase tracking-widest font-bold">
-                        AI is analyzing your request...
-                      </span>
-                    </div>
+                    Field advisor is processing...
                   </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
-
-              {/* Scroll to Bottom Button */}
-              {showScrollButton && (
-                <button
-                  onClick={scrollToBottom}
-                  className="fixed bottom-32 right-12 bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 p-4 rounded-full backdrop-blur-xl border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)] transition-all animate-bounce z-50 group"
-                >
-                  <span className="text-xl group-hover:translate-y-1 transition-transform block">
-                    ↓
-                  </span>
-                </button>
-              )}
             </div>
 
-            {/* Input Area */}
-            <footer className="p-6 bg-slate-900/30 border-t border-slate-800/50">
+            <footer className="p-4 bg-white border-t border-[#2D6A4F]/10">
               {activeTab === "text" && (
-                <div className="relative group">
+                <div className="flex items-center gap-3">
                   <textarea
                     ref={textInputRef}
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Enter command or ask a question..."
+                    onKeyDown={handleKeyPress}
+                    placeholder="Type your question for KissanSeva..."
+                    className="farmer-input flex-1 py-3 px-5 text-sm font-bold resize-none h-12"
                     rows="1"
-                    className="w-full bg-slate-900/80 border-2 border-slate-800 rounded-2xl py-5 pl-6 pr-32 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 transition-all resize-none"
                   />
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex gap-2">
-                    <button
-                      onClick={() => setTextInput("")}
-                      className="p-3 text-slate-500 hover:text-slate-300 transition-colors"
-                    >
-                      <span className="text-xs uppercase tracking-widest font-bold">
-                        Reset
-                      </span>
-                    </button>
-                    <button
-                      onClick={() => sendTextMessage()}
-                      disabled={isLoading || !textInput.trim()}
-                      className="bg-linear-to-r from-emerald-600 to-green-700 hover:from-emerald-500 hover:to-green-600 disabled:from-slate-800 disabled:to-slate-800 disabled:text-slate-600 text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all duration-300 shadow-lg shadow-emerald-500/20 active:scale-95"
-                    >
-                      {isLoading ? "..." : "Execute"}
-                    </button>
-                  </div>
+                  <button onClick={() => sendTextMessage()} disabled={isLoading || !textInput.trim()} className="btn-primary w-12 h-12 flex items-center justify-center organic-shadow">
+                    <span className="text-xl">🌱</span>
+                  </button>
                 </div>
               )}
-
               {activeTab === "image" && (
-                <div className="flex gap-4 animate-fadeIn">
-                  <button
-                    onClick={() => imageInputRef.current?.click()}
-                    className="flex-1 bg-slate-900/80 border-2 border-dashed border-slate-700 rounded-2xl p-4 flex items-center justify-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group"
-                  >
-                    <input
-                      ref={imageInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files[0])
-                          document.getElementById(
-                            "img-status"
-                          ).innerText = `READY: ${e.target.files[0].name}`;
-                      }}
-                    />
-                    <span className="text-3xl group-hover:scale-110 transition-transform">
-                      📸
-                    </span>
-                    <div className="text-left">
-                      <div className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                        Initialize Vision Scan
-                      </div>
-                      <div
-                        id="img-status"
-                        className="text-[10px] text-slate-600"
-                      >
-                        No file selected
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={uploadImage}
-                    disabled={isLoading}
-                    className="bg-linear-to-r from-emerald-600 to-green-700 px-10 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-emerald-500/20"
-                  >
-                    Analyze
-                  </button>
+                <div className="flex flex-col items-center py-6 bg-[#2D6A4F]/5 rounded-2xl border-2 border-dashed border-[#2D6A4F]/20">
+                  <span className="text-4xl mb-3">📸</span>
+                  <p className="text-[10px] font-bold text-[#5D4037]/70 uppercase mb-4">Upload Crop Photo for Diagnosis</p>
+                  <label className="btn-primary px-8 py-3 cursor-pointer text-xs font-black tracking-widest">
+                    CHOOSE FILE
+                    <input type="file" ref={imageInputRef} onChange={uploadImage} accept="image/*" className="hidden" />
+                  </label>
                 </div>
               )}
-
               {activeTab === "voice" && (
-                <div className="flex gap-4 animate-fadeIn">
-                  <button
-                    onClick={() => voiceInputRef.current?.click()}
-                    className="flex-1 bg-slate-900/80 border-2 border-dashed border-slate-700 rounded-2xl p-4 flex items-center justify-center gap-4 hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group"
-                  >
-                    <input
-                      ref={voiceInputRef}
-                      type="file"
-                      accept="audio/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        if (e.target.files[0])
-                          document.getElementById(
-                            "voice-status"
-                          ).innerText = `READY: ${e.target.files[0].name}`;
-                      }}
-                    />
-                    <span className="text-3xl group-hover:scale-110 transition-transform">
-                      🎤
-                    </span>
-                    <div className="text-left">
-                      <div className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                        Initialize Audio Link
-                      </div>
-                      <div
-                        id="voice-status"
-                        className="text-[10px] text-slate-600"
-                      >
-                        No file selected
-                      </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={uploadVoice}
-                    disabled={isLoading}
-                    className="bg-linear-to-r from-emerald-600 to-green-700 px-10 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-emerald-500/20"
-                  >
-                    Process
-                  </button>
+                <div className="flex flex-col items-center py-6 bg-[#FFB703]/5 rounded-2xl border-2 border-dashed border-[#FFB703]/20">
+                  <span className="text-4xl mb-3">🎤</span>
+                  <p className="text-[10px] font-bold text-[#5D4037]/70 uppercase mb-4">Voice Assistant Activity</p>
+                  <label className="bg-[#FFB703] text-[#1B4332] font-black px-8 py-3 rounded-full cursor-pointer text-xs tracking-widest organic-shadow">
+                    START TALKING
+                    <input type="file" ref={voiceInputRef} onChange={uploadVoice} accept="audio/*" className="hidden" />
+                  </label>
                 </div>
               )}
-
               {activeTab === "predict" && (
-                <div className="flex gap-4 animate-fadeIn">
-                  <div className="flex-1 bg-slate-900/80 border border-slate-700 rounded-2xl p-4 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <span className="text-3xl">📊</span>
-                      <div className="text-left">
-                        <div className="text-xs font-bold uppercase tracking-widest text-slate-400">
-                          Yield Prediction Engine
-                        </div>
-                        <div className="text-[10px] text-slate-600">
-                          Ready to analyze environmental features
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      {["N", "P", "K"].map((n) => (
-                        <div
-                          key={n}
-                          className="px-2 py-1 bg-slate-800 rounded text-[8px] font-bold text-emerald-500"
-                        >
-                          {n}: {predictionFeatures[n]}
-                        </div>
-                      ))}
-                    </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-fade-up">
+                  <div className="harvest-card p-5 border border-[#2D6A4F]/10 flex flex-col justify-center">
+                    <div className="text-3xl mb-2">📈</div>
+                    <h3 className="text-lg font-black text-[#1B4332] mb-1">Harvest Forecast</h3>
+                    <p className="text-[10px] text-[#5D4037]/70 font-bold leading-relaxed">
+                      AI yield prediction based on your current soil metrics and weather.
+                    </p>
                   </div>
-                  <button
-                    onClick={() =>
-                      sendTextMessage(
-                        "Based on my current environmental data (N, P, K, Temp, Humidity, pH, Rainfall), please provide a detailed yield prediction and optimization strategy."
-                      )
-                    }
-                    disabled={isLoading}
-                    className="bg-linear-to-r from-emerald-600 to-green-700 px-10 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all hover:scale-105 active:scale-95 shadow-lg shadow-emerald-500/20"
-                  >
-                    Predict
-                  </button>
+                  <div className="flex flex-col gap-3">
+                    <div className="harvest-card p-3 bg-[#74C69D]/5 border border-[#2D6A4F]/10">
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                             <div className="flex justify-between text-[8px] font-black tracking-tighter"><span className="text-[#5D4037]/60">N-P-K:</span> <span className="text-[#2D6A4F]">{predictionFeatures.N}-{predictionFeatures.P}-{predictionFeatures.K}</span></div>
+                             <div className="flex justify-between text-[8px] font-black tracking-tighter"><span className="text-[#5D4037]/60">TEMP:</span> <span className="text-[#2D6A4F]">{predictionFeatures.temperature}°C</span></div>
+                             <div className="flex justify-between text-[8px] font-black tracking-tighter"><span className="text-[#5D4037]/60">HUMID:</span> <span className="text-[#2D6A4F]">{predictionFeatures.humidity}%</span></div>
+                             <div className="flex justify-between text-[8px] font-black tracking-tighter"><span className="text-[#5D4037]/60">pH:</span> <span className="text-[#2D6A4F]">{predictionFeatures.ph}</span></div>
+                        </div>
+                    </div>
+                    <button
+                      onClick={() => sendTextMessage("Predict yield based on my soil data.")}
+                      className="btn-primary py-4 text-xs tracking-widest font-black"
+                    >
+                      GENERATE REPORT ⚡
+                    </button>
+                  </div>
                 </div>
               )}
             </footer>
           </section>
-
-          {/* Right - Quick Action Icons (Outside Chat) */}
-          <div
-            className="hidden xl:flex flex-col gap-4 justify-center animate-fadeIn"
-            style={{ animationDelay: "0.3s" }}
-          >
-            {quickActions.map((action, index) => (
+          
+          <aside className="hidden lg:flex w-16 flex-col gap-2 animate-fade-up">
+            {quickActions.map((action, i) => (
               <button
-                key={index}
+                key={i}
                 onClick={() => sendTextMessage(action.query)}
                 title={action.text}
-                className="w-12 h-12 flex items-center justify-center bg-slate-900/50 border border-slate-800 rounded-2xl hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all group shadow-lg"
+                className="w-full h-16 harvest-card flex items-center justify-center text-2xl hover:bg-[#2D6A4F] hover:text-white transition-all organic-shadow group border border-[#2D6A4F]/10"
               >
-                <div className="text-2xl group-hover:scale-110 transition-transform">
-                  {action.icon}
-                </div>
+                <span className="group-hover:scale-125 transition-transform">{action.icon}</span>
               </button>
             ))}
-          </div>
+            <div className="flex-1"></div>
+            <button 
+              onClick={() => { setUtilityType('settings'); setShowUtility(true); }}
+              className="w-full h-16 harvest-card flex items-center justify-center text-xl hover:bg-[#FFB703] transition-all border border-[#2D6A4F]/10"
+            >
+              ⚙️
+            </button>
+          </aside>
+
+          {renderUtilityModal()}
         </main>
       </div>
-      <style jsx>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateX(-20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        .animate-slideIn {
-          animation: slideIn 0.3s ease-out;
-        }
-        .scale-102:hover {
-          transform: scale(1.02);
-        }
-        .border-3 {
-          border-width: 3px;
-        }
-      `}</style>
     </div>
   );
 };
@@ -1069,44 +930,41 @@ const FarmerChatbot = () => {
 const App = () => {
   const [showChat, setShowChat] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [initialMsg, setInitialMsg] = useState(null);
 
-  const handleEnterChat = () => {
+  const handleEnterChat = (msg = null) => {
+    // Ensure we only pass strings, not React event objects
+    setInitialMsg(typeof msg === 'string' ? msg : null);
     setIsInitializing(true);
     setTimeout(() => {
       setShowChat(true);
       setIsInitializing(false);
-    }, 1500);
+    }, 1200);
   };
 
   if (isInitializing) {
     return (
-      <div className="h-screen farmer-gradient flex flex-col items-center justify-center text-white relative overflow-hidden">
-        <div className="fixed inset-0 bg-grid-pattern opacity-20"></div>
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="text-8xl mb-8 animate-bounce filter drop-shadow-[0_0_30px_rgba(16,185,129,0.6)]">
-            🚜
-          </div>
-          <h2 className="text-2xl font-black tracking-[0.5em] uppercase mb-4 animate-pulse">
-            Initializing AI Core
-          </h2>
-          <div className="w-64 h-1 bg-slate-800 rounded-full overflow-hidden relative">
-            <div className="absolute inset-0 bg-emerald-500/20"></div>
-            <div className="h-full bg-emerald-500 w-full animate-loading-bar"></div>
-          </div>
-          <div className="mt-6 text-[10px] uppercase tracking-[0.3em] text-emerald-500/60 font-bold">
-            Establishing Secure Satellite Link...
-          </div>
+      <div className="h-screen bg-[#FDFBF7] flex flex-col items-center justify-center text-[#1B4332]">
+        <div className="relative mb-8 animate-leaf">
+          <div className="text-9xl filter drop-shadow-2xl">🚜</div>
         </div>
-        <div className="fixed left-0 right-0 h-[2px] bg-emerald-500/20 blur-sm animate-scan"></div>
+        <h2 className="text-2xl font-black tracking-widest text-[#2D6A4F] mb-6 animate-pulse">
+          PREPARING ASSISTANT...
+        </h2>
+        <div className="w-64 h-2 bg-[#2D6A4F]/10 rounded-full overflow-hidden">
+          <div className="h-full bg-[#2D6A4F] animate-pulse w-full"></div>
+        </div>
       </div>
     );
   }
 
-  if (showChat) {
-    return <FarmerChatbot />;
-  }
-
-  return <LandingPage onEnterChat={handleEnterChat} />;
+  return showChat ? (
+    <ErrorBoundary>
+      <FarmerChatbot initialMessage={initialMsg} />
+    </ErrorBoundary>
+  ) : (
+    <LandingPage onEnterChat={handleEnterChat} />
+  );
 };
 
 // Make sure to export the main App component
