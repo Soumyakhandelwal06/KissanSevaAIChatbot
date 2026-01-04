@@ -5,8 +5,8 @@ import "./App.css";
 // CONFIGURATION
 // Use the FastAPI server URL (running on port 8000 by default)
 // ===================================================================================
-const API_BASE = "http://localhost:8000/api";
-const HEALTH_CHECK_URL = "http://localhost:8000/health";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/api` : "http://localhost:8000/api";
+const HEALTH_CHECK_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/health` : "http://localhost:8000/health";
 
 // ===================================================================================
 // Landing Page Component (Futuristic Update)
