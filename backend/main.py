@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
 from google.genai.errors import APIError
+import random
+import requests
 
 # ===================== LOGGING =====================
 import logging
@@ -275,6 +277,175 @@ async def login(user_data: UserLogin):
             "land_size": user["land_size"]
         }
     }
+
+# ===================== MARKET ROUTES =====================
+@app.get("/api/mandi")
+async def get_mandi(state: Optional[str] = "Maharashtra", commodity: Optional[str] = "Onion"):
+    # Try real API if key exists
+    api_key = os.getenv("DATA_GOV_API_KEY")
+    data = []
+    
+    # Simple dictionary for localized mock markets
+    mock_markets = {
+        "Andhra Pradesh": ["Guntur", "Kurnool", "Vijayawada", "Tirupati"],
+        "Arunachal Pradesh": ["Naharlagun", "Pasighat", "Namsai"],
+        "Assam": ["Guwahati", "Jorhat", "Silchar", "Tezpur"],
+        "Bihar": ["Patna", "Muzaffarpur", "Gaya", "Purnia"],
+        "Chhattisgarh": ["Raipur", "Bilaspur", "Durg", "Rajnandgaon"],
+        "Delhi": ["Azadpur", "Okhla", "Keshopur", "Ghazipur"],
+        "Goa": ["Mapusa", "Margao", "Ponda"],
+        "Gujarat": ["Ahmedabad", "Surat", "Rajkot", "Vadodara", "Amreli"],
+        "Haryana": ["Karnal", "Ambala", "Hisar", "Rohtak"],
+        "Himachal Pradesh": ["Shimla", "Solan", "Kangra"],
+        "Jammu and Kashmir": ["Srinagar", "Jammu", "Udhampur"],
+        "Jharkhand": ["Ranchi", "Bokaro", "Dhanbad", "Jamshedpur"],
+        "Karnataka": ["Bengaluru", "Mysuru", "Hubballi", "Belagavi", "Raichur"],
+        "Kerala": ["Kochi", "Thiruvananthapuram", "Kozhikode", "Thrissur"],
+        "Madhya Pradesh": ["Indore", "Bhopal", "Gwalior", "Jabalpur", "Ujjain"],
+        "Maharashtra": ["Pune", "Nashik", "Nagpur", "Mumbai", "Aurangabad", "Lasalgaon"],
+        "Manipur": ["Imphal", "Thoubal", "Bishnupur"],
+        "Meghalaya": ["Shillong", "Tura", "Jowai"],
+        "Mizoram": ["Aizawl", "Lunglei", "Champhai"],
+        "Nagaland": ["Dimapur", "Kohima", "Mokokchung"],
+        "Odisha": ["Bhubaneswar", "Cuttack", "Rourkela", "Sambalpur"],
+        "Punjab": ["Ludhiana", "Patiala", "Bhatinda", "Jalandhar", "Khanna"],
+        "Rajasthan": ["Jaipur", "Jodhpur", "Kota", "Bikaner", "Sri Ganganagar"],
+        "Sikkim": ["Gangtok", "Namchi", "Geyzing"],
+        "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Salem", "Trichy"],
+        "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Khammam"],
+        "Tripura": ["Agartala", "Udaipur", "Dharmanagar"],
+        "Uttar Pradesh": ["Lucknow", "Agra", "Kanpur", "Varanasi", "Meerut"],
+        "Uttarakhand": ["Dehradun", "Haridwar", "Haldwani", "Rudrapur"],
+        "West Bengal": ["Kolkata", "Siliguri", "Burdwan", "Malda", "Medinipur"]
+    }
+
+    if api_key:
+        try:
+             # This is a sample URL for data.gov.in Mandi API
+             url = f"https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?api-key={api_key}&format=json&limit=10&filters[state]={state}&filters[commodity]={commodity}"
+             resp = requests.get(url, timeout=5)
+             if resp.status_code == 200:
+                 real_data = resp.json()
+                 records = real_data.get("records", [])
+                 for r in records:
+                     data.append({
+                         "market": r.get("market"),
+                         "min_price": r.get("min_price"),
+                         "max_price": r.get("max_price"),
+                         "modal_price": r.get("modal_price"),
+                         "date": r.get("arrival_date")
+                     })
+        except Exception as e:
+            logger.error(f"Failed to fetch mandi data: {e}")
+
+    # Fallback / Demo Data
+    if not data:
+        markets = mock_markets.get(state, ["Local Mandi 1", "Local Mandi 2", "Local Mandi 3"])
+        # Base price variation by commodity type
+        base = 2500 # Default
+        c = commodity.lower()
+        
+        # Vegetables
+        if c in ["onion", "potato", "tomato", "cauliflower", "cabbage", "brinjal", "okra", "carrot"]: base = 1500
+        if c in ["garlic", "ginger", "chilli"]: base = 6000
+        if c in ["spinach", "coriander", "fenugreek"]: base = 1000
+        
+        # Fruits
+        if c in ["apple", "banana", "mango", "pomegranate", "lemon", "papaya", "guava", "orange"]: base = 4000
+        if c in ["grapes", "pineapple"]: base = 5000
+        
+        # Grains/Cereals
+        if c in ["rice", "wheat", "maize", "barley", "millet", "jowar", "bajra"]: base = 2200
+        
+        # Pulses/Dal
+        if c in ["moong", "urad", "tur", "masoor", "gram", "arhar"]: base = 7000
+        
+        # Commercial/Spices
+        if c in ["cotton", "soybean", "jute"]: base = 5500
+        if c in ["turmeric", "cumin", "cardamom", "pepper"]: base = 12000
+        if c in ["sugarcane", "mustard", "groundnut"]: base = 4500
+        
+        for m in markets:
+            mp = base + random.randint(-200, 200)
+            data.append({
+                "market": m,
+                "min_price": mp - 100,
+                "max_price": mp + 150,
+                "modal_price": mp,
+                "date": datetime.now().strftime("%d/%m/%Y")
+            })
+            
+    # Generate Trend Data (Last 7 days)
+    trend = []
+    current_val = float(data[0]['modal_price']) if data else 2000.0
+    
+    # 7 days trend
+    import datetime as dt
+    today = datetime.now()
+    for i in range(7):
+        d = today - dt.timedelta(days=6-i)
+        trend.append({
+             "date": d.strftime("%d %b"),
+             "price": int(current_val + random.randint(-150, 150))
+        })
+
+    return {"current": data, "trend": trend}
+
+# ===================== WEATHER ROUTES =====================
+@app.get("/api/weather")
+async def get_weather(city: str):
+    try:
+        # Step 1: Geocoding
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city}&count=1&language=en&format=json"
+        geo_res = requests.get(geo_url, timeout=5)
+        if geo_res.status_code != 200:
+            return JSONResponse(status_code=404, content={"message": "City not found"})
+            
+        geo_data = geo_res.json()
+        if not geo_data.get("results"):
+            return JSONResponse(status_code=404, content={"message": "City not found"})
+            
+        location = geo_data["results"][0]
+        lat = location["latitude"]
+        lon = location["longitude"]
+        place_name = f"{location['name']}, {location.get('admin1', '')}, {location.get('country', '')}"
+
+        # Step 2: Forecast
+        # Daily: max temp, min temp, rain sum, weathercode
+        forecast_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto"
+        weather_res = requests.get(forecast_url, timeout=5)
+        
+        if weather_res.status_code != 200:
+            return JSONResponse(status_code=500, content={"message": "Weather service unavailable"})
+            
+        w_data = weather_res.json()
+        daily = w_data.get("daily", {})
+        
+        forecast = []
+        if daily:
+            times = daily.get("time", [])
+            max_temps = daily.get("temperature_2m_max", [])
+            min_temps = daily.get("temperature_2m_min", [])
+            precips = daily.get("precipitation_sum", [])
+            codes = daily.get("weather_code", [])
+            
+            for i in range(len(times)):
+                forecast.append({
+                    "date": times[i],
+                    "max_temp": max_temps[i],
+                    "min_temp": min_temps[i],
+                    "rain": precips[i],
+                    "code": codes[i]
+                })
+
+        return {
+            "location": place_name,
+            "forecast": forecast
+        }
+
+    except Exception as e:
+        logger.error(f"Weather API Error: {e}")
+        return JSONResponse(status_code=500, content={"message": "Internal Server Error"})
 
 # ===================== RUN =====================
 if __name__ == "__main__":

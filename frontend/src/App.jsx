@@ -53,11 +53,12 @@ class ErrorBoundary extends React.Component {
 // Shared Components (Modals)
 // ===================================================================================
 
-const CropCalendarModal = ({ onClose }) => {
+const CropCalendarModal = ({ onClose, initialCrop }) => {
     const user = JSON.parse(localStorage.getItem("kissan_profile")) || { crop: "Rice" };
-    const cropName = user.crop?.split('/')[0].trim() || "Rice";
+    // Initialize with prop, then profile, then default
+    const [selectedCrop, setSelectedCrop] = useState(initialCrop || user.crop?.split('/')[0].trim() || "Rice");
     
-    // Simple mock schedule
+    // Expanded Schedules
     const schedules = {
         "Rice": [
             { day: 0, title: "Seed Sowing", desc: "Prepare nursery bed with organic manure." },
@@ -73,10 +74,40 @@ const CropCalendarModal = ({ onClose }) => {
             { day: 45, title: "Tillering Stage", desc: "Apply second dose of Nitrogen." },
             { day: 85, title: "Flowering", desc: "Watch for yellow rust symptoms." },
             { day: 120, title: "Harvesting", desc: "Harvest when grains break with a tik sound." }
+        ],
+        "Maize": [
+            { day: 0, title: "Sowing", desc: "Plant seeds with proper spacing (60x20 cm)." },
+            { day: 20, title: "Knee High Stage", desc: "Apply Nitrogen top dressing." },
+            { day: 45, title: "Tasseling", desc: "Critical water requirement stage." },
+            { day: 60, title: "Silking", desc: "Check for worm infestations." },
+            { day: 95, title: "Harvesting", desc: "Harvest when cob husk turns dry." }
+        ],
+        "Cotton": [
+            { day: 0, title: "Sowing", desc: "Sow fuzzy seeds at proper moisture depth." },
+            { day: 30, title: "Thinning", desc: "Maintain 1 plant per hill." },
+            { day: 60, title: "Square Formation", desc: "Monitor for bollworms." },
+            { day: 90, title: "Boll Development", desc: "Apply Potassium for better fiber." },
+            { day: 150, title: "Picking", desc: "Pick fully burst bolls in dry weather." }
+        ],
+        "Sugarcane": [
+            { day: 0, title: "Planting", desc: "Place setts in furrows." },
+            { day: 45, title: "Germination", desc: "Fill gaps if germination is poor." },
+            { day: 120, title: "Formative Stage", desc: "Heavy irrigation and earthing up." },
+            { day: 240, title: "Grand Growth", desc: "Prevent lodging of heavy canes." },
+            { day: 360, title: "Harvesting", desc: "Harvest at peak maturity for sugar recovery." }
+        ],
+        "Tomato": [
+            { day: 0, title: "Transplanting", desc: "Plant 25-day old healthy seedlings." },
+            { day: 20, title: "Staking", desc: "Support plants to prevent fruit rot." },
+            { day: 45, title: "Flowering", desc: "Spray micronutrients for fruit set." },
+            { day: 70, title: "First Harvest", desc: "Pick fruits at breaker stage." }
         ]
     };
     
-    const tasks = schedules[cropName] || schedules["Rice"]; // Fallback to Rice
+    // Normalize selected crop string for lookup key
+    const lookupKey = Object.keys(schedules).find(k => k.toLowerCase() === selectedCrop.toLowerCase()) || "Rice";
+    const tasks = schedules[lookupKey];
+    
     const [completed, setCompleted] = useState(() => {
         const saved = localStorage.getItem("calendar_progress");
         return saved ? JSON.parse(saved) : [];
@@ -95,12 +126,26 @@ const CropCalendarModal = ({ onClose }) => {
           <div className="absolute inset-0 bg-[#1B4332]/70 backdrop-blur-md" onClick={onClose}></div>
           <div className="harvest-card w-full max-w-lg h-[80vh] flex flex-col relative z-10 animate-scale-up overflow-hidden bg-[#FDFBF7]">
             {/* Header */}
-            <div className="p-6 border-b border-[#2D6A4F]/10 flex justify-between items-center bg-white">
-                <div>
-                    <h2 className="text-2xl font-black text-[#1B4332]">📅 CROP CALENDAR</h2>
-                    <p className="text-xs font-bold text-[#5D4037]/60 uppercase tracking-widest">Timeline for {cropName}</p>
+            <div className="p-6 border-b border-[#2D6A4F]/10 flex flex-col bg-white gap-4">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <h2 className="text-2xl font-black text-[#1B4332]">📅 CROP CALENDAR</h2>
+                        <p className="text-[10px] font-bold text-[#5D4037]/60 uppercase tracking-widest">Growth Guide</p>
+                    </div>
+                    <button onClick={onClose} className="text-[#5D4037]/50 hover:text-[#5D4037] font-bold text-xl">✕</button>
                 </div>
-                <button onClick={onClose} className="text-[#5D4037]/50 hover:text-[#5D4037] font-bold text-xl">✕</button>
+                
+                {/* Crop Selector */}
+                <div className="relative">
+                    <select 
+                        value={lookupKey} 
+                        onChange={(e) => setSelectedCrop(e.target.value)}
+                        className="w-full bg-[#2D6A4F]/5 border border-[#2D6A4F]/10 text-[#1B4332] font-bold text-sm rounded-xl px-4 py-3 outline-none focus:border-[#2D6A4F] appearance-none"
+                    >
+                        {Object.keys(schedules).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#2D6A4F]">▼</div>
+                </div>
             </div>
             
             {/* Timeline */}
@@ -745,7 +790,7 @@ const LandingPage = ({ onEnterChat }) => {
 const TabButton = ({ id, icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center justify-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all duration-300 ${
+    className={`flex items-center justify-center gap-2 px-3 lg:px-4 py-3 rounded-2xl font-bold transition-all duration-300 ${
       isActive
         ? "bg-[#2D6A4F] text-white shadow-lg organic-shadow"
         : "text-[#5D4037] hover:bg-[#2D6A4F]/5"
@@ -766,7 +811,104 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
   const [showUtility, setShowUtility] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showCommunity, setShowCommunity] = useState(false);
+  
+  // Mandi State
+  const [mandiData, setMandiData] = useState(null);
+  const [selectedState, setSelectedState] = useState("Maharashtra");
+  const [selectedCommodity, setSelectedCommodity] = useState("Onion");
+  const [mandiLoading, setMandiLoading] = useState(false);
   const [utilityType, setUtilityType] = useState(null); // 'language', 'settings', 'help', 'profile'
+  const [activeTab, setActiveTab] = useState("text");
+
+  // Weather State
+  const [weatherData, setWeatherData] = useState(null);
+  const [searchCity, setSearchCity] = useState("New Delhi");
+  const [weatherLoading, setWeatherLoading] = useState(false);
+
+  const fetchWeather = async () => {
+    setWeatherLoading(true);
+    try {
+        const res = await fetch(`${API_BASE}/weather?city=${searchCity}`);
+        if (!res.ok) throw new Error("Weather fetch failed");
+        const data = await res.json();
+        setWeatherData(data);
+    } catch (e) {
+        console.error("Weather error", e);
+        // Optional: addMessage("Could not fetch weather.", false, "error");
+    } finally {
+        setWeatherLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "weather" && !weatherData) {
+        fetchWeather();
+    }
+  }, [activeTab]);
+
+  const fetchMandiData = async () => {
+      setMandiLoading(true);
+      try {
+          const res = await fetch(`${API_BASE}/mandi?state=${selectedState}&commodity=${selectedCommodity}`);
+          const data = await res.json();
+          setMandiData(data);
+      } catch (e) {
+          console.error("Mandi fetch failed", e);
+      } finally {
+          setMandiLoading(false);
+      }
+  };
+
+  useEffect(() => {
+      if (activeTab === "prices" && !mandiData) {
+          fetchMandiData();
+      }
+  }, [activeTab]);
+
+  const renderTrendChart = () => {
+      if (!mandiData?.trend) return null;
+      const data = mandiData.trend;
+      const maxPrice = Math.max(...data.map(d => d.price)) + 100;
+      const minPrice = Math.min(...data.map(d => d.price)) - 100;
+      const range = maxPrice - minPrice;
+      
+      const pts = data.map((d, i) => {
+          const x = (i / (data.length - 1)) * 100;
+          const y = 100 - ((d.price - minPrice) / range) * 100;
+          return `${x},${y}`;
+      }).join(" ");
+
+      return (
+          <div className="w-full h-32 relative mt-4">
+              <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+                  {/* Grid */}
+                  <line x1="0" y1="25" x2="100" y2="25" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
+                  <line x1="0" y1="50" x2="100" y2="50" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
+                  <line x1="0" y1="75" x2="100" y2="75" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5" />
+                  
+                  {/* Line */}
+                  <polyline points={pts} fill="none" stroke="#FFB703" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                  
+                  {/* Dots */}
+                  {data.map((d, i) => {
+                      const x = (i / (data.length - 1)) * 100;
+                      const y = 100 - ((d.price - minPrice) / range) * 100;
+                      return (
+                          <g key={i} className="group cursor-pointer">
+                              <circle cx={x} cy={y} r="2" fill="#fff" stroke="#FFB703" strokeWidth="1" vectorEffect="non-scaling-stroke" />
+                              <text x={x} y={y - 10} textAnchor="middle" fontSize="4" fill="white" className="opacity-0 group-hover:opacity-100 transition-opacity font-bold">₹{d.price}</text>
+                          </g>
+                      );
+                  })}
+              </svg>
+              <div className="flex justify-between text-[8px] text-white/50 mt-2 font-bold uppercase tracking-widest">
+                  <span>{data[0].date}</span>
+                  <span>Price Trend (7 Days)</span>
+                  <span>{data[data.length-1].date}</span>
+              </div>
+          </div>
+      );
+  };
   const [language, setLanguage] = useState('en'); // 'en', 'hi'
   const [appSettings, setAppSettings] = useState({
     highContrast: false,
@@ -810,7 +952,6 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
       }]);
     }
   }, [language]);
-  const [activeTab, setActiveTab] = useState("text");
   const [textInput, setTextInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("checking");
@@ -1162,11 +1303,13 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
             </div>
           </div>
 
-          <nav className="flex items-center gap-1 bg-[#2D6A4F]/5 p-1 rounded-2xl mx-4">
+          <nav className="flex items-center gap-1 bg-[#2D6A4F]/5 p-1 rounded-2xl mx-1">
             <TabButton id="text" icon="💬" label="Chat Advice" isActive={activeTab === "text"} onClick={() => setActiveTab("text")} />
             <TabButton id="image" icon="📸" label="Plant Scan" isActive={activeTab === "image"} onClick={() => setActiveTab("image")} />
             <TabButton id="voice" icon="🎤" label="Voice Helper" isActive={activeTab === "voice"} onClick={() => setActiveTab("voice")} />
             <TabButton id="predict" icon="📊" label="Harvest Plan" isActive={activeTab === "predict"} onClick={() => setActiveTab("predict")} />
+            <TabButton id="prices" icon="📉" label="Market Prices" isActive={activeTab === "prices"} onClick={() => setActiveTab("prices")} />
+            <TabButton id="weather" icon="☁️" label="Weather" isActive={activeTab === "weather"} onClick={() => setActiveTab("weather")} />
           </nav>
 
           <div className="flex items-center gap-3">
@@ -1372,6 +1515,169 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
                 </div>
               )}
             </footer>
+
+            {activeTab === "weather" && (
+                <div className="absolute inset-0 bg-[#FDFBF7] z-10 flex flex-col p-6 overflow-y-auto animate-fade-up">
+                   <div className="flex gap-4 mb-6 sticky top-0 bg-[#FDFBF7] py-2 z-20">
+                        <input 
+                            type="text" 
+                            value={searchCity}
+                            onChange={(e) => setSearchCity(e.target.value)}
+                            placeholder="Enter City Name..."
+                            className="flex-1 bg-white border border-[#2D6A4F]/20 rounded-xl px-4 py-3 font-bold text-[#1B4332] outline-none focus:border-[#2D6A4F] shadow-sm"
+                        />
+                        <button onClick={fetchWeather} disabled={weatherLoading} className="btn-primary w-12 h-12 flex items-center justify-center rounded-xl shadow-lg">
+                            {weatherLoading ? "⌛" : "🔍"}
+                        </button>
+                    </div>
+
+                    {weatherData && (
+                        <div className="space-y-6">
+                            {/* Current Weather Hero */}
+                            <div className="rounded-2xl bg-[#457B9D] p-6 text-white relative overflow-hidden shadow-xl border border-[#457B9D]/20">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-[#A8DADC] font-bold text-xs uppercase tracking-widest mb-1">Current Forecast</p>
+                                            <h3 className="text-4xl font-black tracking-tight">{weatherData.location}</h3>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-5xl">{weatherData.forecast[0] ? (
+                                                [0,1].includes(weatherData.forecast[0].code) ? "☀️" : 
+                                                [2,3].includes(weatherData.forecast[0].code) ? "⛅" :
+                                                [45,48].includes(weatherData.forecast[0].code) ? "🌫️" :
+                                                [51,53,55,61,63,65].includes(weatherData.forecast[0].code) ? "🌧️" :
+                                                [71,73,75].includes(weatherData.forecast[0].code) ? "❄️" :
+                                                [95,96,99].includes(weatherData.forecast[0].code) ? "⛈️" : "☁️"
+                                            ) : "🌤️"}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-end gap-2">
+                                        <span className="text-6xl font-black">{weatherData.forecast[0]?.max_temp}°</span>
+                                        <span className="mb-2 opacity-60 font-bold text-xl">/ {weatherData.forecast[0]?.min_temp}°</span>
+                                    </div>
+                                    <div className="mt-4 flex gap-4">
+                                        <div className="bg-white/10 px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                            <span className="text-xs">☔</span>
+                                            <span className="text-xs font-bold">{weatherData.forecast[0]?.rain}mm Rain</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 7 Day Forecast */}
+                            <div>
+                                <h4 className="text-[#5D4037]/60 font-black text-xs uppercase tracking-widest mb-4">7 Day Forecast</h4>
+                                <div className="flex gap-3 overflow-x-auto pb-4 snap-x">
+                                    {weatherData.forecast.map((day, i) => (
+                                        <div key={i} className="min-w-[100px] bg-white p-4 rounded-xl border border-[#2D6A4F]/10 flex flex-col items-center justify-center gap-2 shadow-sm snap-start">
+                                            <span className="text-[10px] font-black text-[#5D4037]/60 uppercase">{new Date(day.date).toLocaleDateString('en-US', {weekday: 'short'})}</span>
+                                            <span className="text-2xl">{
+                                                [0,1].includes(day.code) ? "☀️" : 
+                                                [2,3].includes(day.code) ? "⛅" :
+                                                [45,48].includes(day.code) ? "🌫️" :
+                                                [51,53,55,61,63,65].includes(day.code) ? "🌧️" :
+                                                [71,73,75].includes(day.code) ? "❄️" :
+                                                [95,96,99].includes(day.code) ? "⛈️" : "☁️"
+                                            }</span>
+                                            <div className="text-center">
+                                                <span className="block text-sm font-black text-[#1B4332]">{day.max_temp}°</span>
+                                                <span className="block text-[10px] font-bold text-[#5D4037]/40">{day.min_temp}°</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+            {activeTab === "prices" && (
+                <div className="absolute inset-0 bg-[#FDFBF7] z-10 flex flex-col p-6 overflow-y-auto animate-fade-up">
+                    <div className="flex flex-wrap gap-4 mb-6 sticky top-0 bg-[#FDFBF7] py-2 z-20">
+                        <select 
+                            value={selectedState} 
+                            onChange={e => setSelectedState(e.target.value)} 
+                            className="flex-1 bg-white border border-[#2D6A4F]/20 rounded-xl px-4 py-3 font-bold text-[#1B4332] outline-none focus:border-[#2D6A4F] shadow-sm appearance-none"
+                        >
+                            {["Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"].map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <select 
+                            value={selectedCommodity} 
+                            onChange={e => setSelectedCommodity(e.target.value)} 
+                            className="flex-1 bg-white border border-[#2D6A4F]/20 rounded-xl px-4 py-3 font-bold text-[#1B4332] outline-none focus:border-[#2D6A4F] shadow-sm appearance-none"
+                        >
+                            <optgroup label="Essential Vegetables">
+                                {["Onion", "Tomato", "Potato", "Brinjal", "Cabbage", "Cauliflower", "Okra", "Carrot", "Garlic", "Ginger", "Chilli"].map(c => <option key={c} value={c}>{c}</option>)}
+                            </optgroup>
+                            <optgroup label="Leafy Vegetables">
+                                {["Spinach", "Coriander", "Fenugreek"].map(c => <option key={c} value={c}>{c}</option>)}
+                            </optgroup>
+                            <optgroup label="Fruits">
+                                {["Apple", "Banana", "Mango", "Papaya", "Pomegranate", "Lemon", "Guava", "Orange", "Grapes", "Pineapple"].map(c => <option key={c} value={c}>{c}</option>)}
+                            </optgroup>
+                            <optgroup label="Grains & Cereals">
+                                {["Rice", "Wheat", "Maize", "Barley", "Millet", "Jowar", "Bajra"].map(c => <option key={c} value={c}>{c}</option>)}
+                            </optgroup>
+                            <optgroup label="Pulses (Dal)">
+                                {["Tur", "Moong", "Urad", "Masoor", "Gram", "Arhar"].map(c => <option key={c} value={c}>{c}</option>)}
+                            </optgroup>
+                            <optgroup label="Commercial & Spices">
+                                {["Cotton", "Soybean", "Sugarcane", "Mustard", "Groundnut", "Turmeric", "Cumin", "Cardamom", "Pepper", "Jute"].map(c => <option key={c} value={c}>{c}</option>)}
+                            </optgroup>
+                        </select>
+                        <button 
+                            onClick={fetchMandiData} 
+                            disabled={mandiLoading}
+                            className="btn-primary w-12 h-12 flex items-center justify-center rounded-xl shadow-lg"
+                        >
+                            {mandiLoading ? "⌛" : "🔍"}
+                        </button>
+                    </div>
+
+                    {mandiData && (
+                        <div className="space-y-6">
+                            {/* Hero Card */}
+                            <div className="harvest-card bg-[#1B4332] p-6 text-white relative overflow-hidden shadow-xl">
+                                <div className="absolute top-0 right-0 p-32 bg-[#2D6A4F] rounded-full blur-3xl opacity-50 -mr-16 -mt-16"></div>
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div>
+                                            <p className="text-[#74C69D] font-bold text-xs uppercase tracking-widest mb-1">Highest Market Rate</p>
+                                            <h3 className="text-4xl font-black tracking-tight">₹{mandiData.current?.length > 0 ? Math.max(...mandiData.current.map(r=>r.max_price)) : "N/A"}<span className="text-lg font-bold opacity-60">/qtl</span></h3>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-white/60 text-[10px] font-bold uppercase">{selectedState}</p>
+                                            <p className="text-[#FFB703] font-black text-xl">{selectedCommodity}</p>
+                                        </div>
+                                    </div>
+                                    {renderTrendChart()}
+                                </div>
+                            </div>
+
+                            {/* Market List */}
+                            <div>
+                                <h4 className="text-[#5D4037]/60 font-black text-xs uppercase tracking-widest mb-4">Live Market Rates</h4>
+                                <div className="grid grid-cols-1 gap-3">
+                                    {mandiData.current.map((m, i) => (
+                                        <div key={i} className="bg-white p-4 rounded-xl border border-[#2D6A4F]/10 flex justify-between items-center shadow-sm hover:border-[#2D6A4F] transition-colors cursor-pointer group">
+                                            <div>
+                                                <h5 className="font-bold text-[#1B4332] text-lg">{m.market}</h5>
+                                                <p className="text-[10px] text-[#5D4037]/60 font-bold uppercase tracking-wider">{m.date}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="font-black text-[#2D6A4F] text-xl">₹{m.modal_price}</p>
+                                                <p className="text-[9px] text-[#5D4037]/40 font-bold">Range: {m.min_price}-{m.max_price}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
           </section>
           
           <aside className="hidden lg:flex w-16 flex-col gap-2 animate-fade-up">
@@ -1388,7 +1694,7 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
             <div className="flex-1"></div>
           </aside>
 
-          {showCalendar && <CropCalendarModal onClose={() => setShowCalendar(false)} />}
+          {showCalendar && <CropCalendarModal onClose={() => setShowCalendar(false)} initialCrop={context.crop} />}
           {showCommunity && <CommunityModal onClose={() => setShowCommunity(false)} isLoggedIn={true} />}
           {renderUtilityModal()}
         </main>
