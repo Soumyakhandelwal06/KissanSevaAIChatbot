@@ -11,6 +11,8 @@ from google import genai
 from google.genai.errors import APIError
 
 # ===================== LOGGING =====================
+import logging
+from datetime import datetime
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -180,7 +182,101 @@ async def analyze_image(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+from passlib.context import CryptContext
+from database import users_collection, posts_collection
+from models import UserCreate, UserLogin, UserInDB, PostCreate, PostInDB
+
+# ... (Auth Helpers verify_password, get_password_hash remain same) ...
+
+# ===================== COMMUNITY ROUTES =====================
+@app.get("/api/posts")
+async def get_posts():
+    posts_cursor = posts_collection.find().sort("created_at", -1).limit(50)
+    posts = await posts_cursor.to_list(length=50)
+    # Convert ObjectId to str for JSON serialization
+    for p in posts:
+        p["id"] = str(p["_id"])
+        del p["_id"]
+    return posts
+
+@app.post("/api/posts")
+async def create_post(post: PostCreate, user_name: str, location: str):
+    post_dict = post.dict()
+    post_dict["user_name"] = user_name
+    post_dict["location"] = location
+    post_dict["created_at"] = datetime.utcnow()
+    post_dict["likes"] = 0
+    
+    new_post = await posts_collection.insert_one(post_dict)
+    
+    # Return the created post
+    created_post = post_dict
+    created_post["id"] = str(new_post.inserted_id)
+    return created_post
+
+# ===================== AUTH HELPERS =====================
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+# ===================== AUTH ROUTES =====================
+@app.post("/api/register")
+async def register(user: UserCreate):
+    # Check if phone already exists
+    existing_user = await users_collection.find_one({"phone": user.phone})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Phone number already registered")
+
+    # Hash password
+    hashed_password = get_password_hash(user.password)
+    
+    # Create user dict
+    user_dict = user.dict()
+    user_dict["hashed_password"] = hashed_password
+    del user_dict["password"]
+    user_dict["created_at"] = datetime.utcnow() # Simple timestamp
+
+    # Insert into DB
+    result = await users_collection.insert_one(user_dict)
+    
+    return {
+        "status": "success",
+        "message": "User registered successfully",
+        "user": {
+            "name": user.name,
+            "phone": user.phone,
+            "location": user.location,
+            "crop": user.crop,
+            "land_size": user.land_size
+        }
+    }
+
+@app.post("/api/login")
+async def login(user_data: UserLogin):
+    user = await users_collection.find_one({"phone": user_data.phone})
+    if not user:
+        raise HTTPException(status_code=400, detail="Incorrect phone number or password")
+    
+    if not verify_password(user_data.password, user["hashed_password"]):
+        raise HTTPException(status_code=400, detail="Incorrect phone number or password")
+
+    return {
+        "status": "success",
+        "message": "Login successful",
+        "user": {
+            "name": user["name"],
+            "phone": user["phone"],
+            "location": user["location"],
+            "crop": user["crop"],
+            "land_size": user["land_size"]
+        }
+    }
+
 # ===================== RUN =====================
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=API_HOST, port=API_PORT, reload=True)
+    uvicorn.run("main:app", host=API_HOST, port=API_PORT, reload=True)

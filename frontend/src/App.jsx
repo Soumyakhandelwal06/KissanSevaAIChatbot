@@ -49,10 +49,482 @@ class ErrorBoundary extends React.Component {
 // ===================================================================================
 // Landing Page Component (Futuristic Update)
 // ===================================================================================
+// ===================================================================================
+// Shared Components (Modals)
+// ===================================================================================
+
+const CropCalendarModal = ({ onClose }) => {
+    const user = JSON.parse(localStorage.getItem("kissan_profile")) || { crop: "Rice" };
+    const cropName = user.crop?.split('/')[0].trim() || "Rice";
+    
+    // Simple mock schedule
+    const schedules = {
+        "Rice": [
+            { day: 0, title: "Seed Sowing", desc: "Prepare nursery bed with organic manure." },
+            { day: 21, title: "Transplanting", desc: "Move 3-4 week old seedlings to puddled field." },
+            { day: 35, title: "First Weeding", desc: "Manual weeding to prevent competition." },
+            { day: 50, title: "Top Dressing (Urea)", desc: "Apply 1/3rd nitrogen for vegetative growth." },
+            { day: 75, title: "Panicle Initiation", desc: "Maintain 5cm water level. Do not stress crop." },
+            { day: 110, title: "Harvesting", desc: "Harvest when 80% grains are golden yellow." }
+        ],
+        "Wheat": [
+            { day: 0, title: "Sowing", desc: "Sow seeds at depth of 4-5 cm." },
+            { day: 21, title: "CRI Stage Irrigation", desc: "Critical root irrigation is essential now." },
+            { day: 45, title: "Tillering Stage", desc: "Apply second dose of Nitrogen." },
+            { day: 85, title: "Flowering", desc: "Watch for yellow rust symptoms." },
+            { day: 120, title: "Harvesting", desc: "Harvest when grains break with a tik sound." }
+        ]
+    };
+    
+    const tasks = schedules[cropName] || schedules["Rice"]; // Fallback to Rice
+    const [completed, setCompleted] = useState(() => {
+        const saved = localStorage.getItem("calendar_progress");
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    const toggleTask = (index) => {
+        const newCompleted = completed.includes(index) 
+            ? completed.filter(i => i !== index)
+            : [...completed, index];
+        setCompleted(newCompleted);
+        localStorage.setItem("calendar_progress", JSON.stringify(newCompleted));
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#1B4332]/70 backdrop-blur-md" onClick={onClose}></div>
+          <div className="harvest-card w-full max-w-lg h-[80vh] flex flex-col relative z-10 animate-scale-up overflow-hidden bg-[#FDFBF7]">
+            {/* Header */}
+            <div className="p-6 border-b border-[#2D6A4F]/10 flex justify-between items-center bg-white">
+                <div>
+                    <h2 className="text-2xl font-black text-[#1B4332]">📅 CROP CALENDAR</h2>
+                    <p className="text-xs font-bold text-[#5D4037]/60 uppercase tracking-widest">Timeline for {cropName}</p>
+                </div>
+                <button onClick={onClose} className="text-[#5D4037]/50 hover:text-[#5D4037] font-bold text-xl">✕</button>
+            </div>
+            
+            {/* Timeline */}
+            <div className="flex-1 overflow-y-auto p-8 relative">
+                {/* Vertical Line */}
+                <div className="absolute left-8 top-8 bottom-8 w-0.5 bg-[#2D6A4F]/20"></div>
+
+                <div className="space-y-8">
+                    {tasks.map((task, i) => (
+                        <div key={i} className={`relative pl-8 transition-all ${completed.includes(i) ? "opacity-50 grayscale" : ""}`}>
+                            {/* Dot */}
+                            <div 
+                                onClick={() => toggleTask(i)}
+                                className={`absolute left-[-5px] top-1 w-3 h-3 rounded-full border-2 cursor-pointer transition-colors z-10 ${
+                                    completed.includes(i) ? "bg-[#2D6A4F] border-[#2D6A4F]" : "bg-white border-[#2D6A4F]"
+                                }`}
+                            ></div>
+                            
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-[#2D6A4F]/10 hover:border-[#2D6A4F]/30 transition-colors">
+                                <div className="flex justify-between items-center mb-1">
+                                    <h3 className="font-bold text-[#1B4332]">{task.title}</h3>
+                                    <span className="text-[10px] font-black bg-[#FFB703]/20 text-[#1B4332] px-2 py-0.5 rounded-full">Day {task.day}</span>
+                                </div>
+                                <p className="text-sm text-[#5D4037]/80 leading-relaxed">{task.desc}</p>
+                                <button 
+                                    onClick={() => toggleTask(i)}
+                                    className={`mt-3 text-[10px] font-black uppercase tracking-widest ${
+                                        completed.includes(i) ? "text-[#2D6A4F]" : "text-[#5D4037]/40 hover:text-[#2D6A4F]"
+                                    }`}
+                                >
+                                    {completed.includes(i) ? "✓ COMPLETED" : "MARK AS DONE"}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+          </div>
+        </div>
+    );
+};
+
+const CommunityModal = ({ onClose, isLoggedIn }) => {
+    const [posts, setPosts] = useState([]);
+    const [newContent, setNewContent] = useState("");
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchPosts();
+    }, []);
+
+    const fetchPosts = async () => {
+        try {
+            const res = await fetch(`${API_BASE}/posts`);
+            const data = await res.json();
+            setPosts(data);
+            setLoading(false);
+        } catch (e) {
+            console.error("Failed to fetch posts", e);
+            setLoading(false);
+        }
+    };
+
+    const handlePost = async () => {
+        if (!newContent) return;
+        const user = JSON.parse(localStorage.getItem("kissan_profile"));
+        if (!user) {
+             alert("Please login to post!");
+             return;
+        }
+
+        try {
+            // Using query params as per backend definition
+            const url = `${API_BASE}/posts?user_name=${encodeURIComponent(user.name)}&location=${encodeURIComponent(user.location)}`;
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: newContent,
+                    image_url: null 
+                })
+            });
+            if (res.ok) {
+                setNewContent("");
+                fetchPosts(); // Refresh feed
+            }
+        } catch (e) {
+            alert("Failed to post");
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#1B4332]/70 backdrop-blur-md" onClick={onClose}></div>
+          <div className="harvest-card w-full max-w-2xl h-[80vh] flex flex-col relative z-10 animate-scale-up overflow-hidden bg-[#FDFBF7]">
+            {/* Header */}
+            <div className="p-6 border-b border-[#2D6A4F]/10 flex justify-between items-center bg-white">
+                <div>
+                    <h2 className="text-2xl font-black text-[#1B4332]">👨‍🌾 KISSAN CHAUPAL</h2>
+                    <p className="text-xs font-bold text-[#5D4037]/60 uppercase tracking-widest">Community Feed</p>
+                </div>
+                <button onClick={onClose} className="text-[#5D4037]/50 hover:text-[#5D4037] font-bold text-xl">✕</button>
+            </div>
+            
+            {/* Feed */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {loading ? <p className="text-center text-[#5D4037]/50">Loading Chaupal...</p> : posts.map((post) => (
+                    <div key={post.id} className="bg-white p-4 rounded-xl shadow-sm border border-[#2D6A4F]/5">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-full bg-[#74C69D]/20 flex items-center justify-center text-[#1B4332] font-black">
+                                {post.user_name?.charAt(0)}
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-[#1B4332]">{post.user_name}</p>
+                                <p className="text-[10px] uppercase font-bold text-[#5D4037]/50">{post.location} • Just now</p>
+                            </div>
+                        </div>
+                        <p className="text-[#4A4A4A] text-sm leading-relaxed mb-3">{post.content}</p>
+                        <div className="flex items-center gap-4 pt-3 border-t border-gray-100">
+                            <button className="flex items-center gap-1 text-xs font-bold text-[#5D4037]/60 hover:text-[#E63946] transition-colors">
+                                <span>❤️</span> {post.likes || 0} Likes
+                            </button>
+                             <button className="flex items-center gap-1 text-xs font-bold text-[#5D4037]/60 hover:text-[#2D6A4F] transition-colors">
+                                <span>💬</span> Comment
+                            </button>
+                        </div>
+                    </div>
+                ))}
+                {!loading && posts.length === 0 && (
+                    <div className="text-center py-10 opacity-50">
+                        <div className="text-4xl mb-2">🦗</div>
+                        <p className="font-bold">No updates yet. Be the first to post!</p>
+                    </div>
+                )}
+            </div>
+
+            {/* Input Area */}
+            {isLoggedIn ? (
+                <div className="p-4 bg-white border-t border-[#2D6A4F]/10 flex gap-4 items-center">
+                    <input 
+                        value={newContent}
+                        onChange={(e) => setNewContent(e.target.value)}
+                        placeholder="Share an update with fellow farmers..." 
+                        className="flex-1 farmer-input p-3 text-sm font-bold text-[#1B4332] outline-none"
+                    />
+                    <button 
+                        onClick={handlePost}
+                        className="btn-primary px-6 py-3 text-xs font-black tracking-widest uppercase"
+                    >
+                        POST
+                    </button>
+                </div>
+            ) : (
+                <div className="p-4 bg-[#F1F8E9] text-center border-t border-[#2D6A4F]/10">
+                    <p className="text-xs font-bold text-[#2D6A4F]">Please Login to post updates</p>
+                </div>
+            )}
+          </div>
+        </div>
+    );
+};
+
+const ResourcesHub = ({ onClose }) => (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[#1B4332]/70 backdrop-blur-md" onClick={onClose}></div>
+      <div className="harvest-card w-full max-w-4xl p-8 relative z-10 animate-scale-up overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#FFB703] via-[#74C69D] to-[#FFB703]"></div>
+        <button 
+          onClick={onClose}
+          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[#2D6A4F]/5 flex items-center justify-center text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white transition-all font-bold"
+        >✕</button>
+        
+        <div className="text-center mb-8">
+          <h2 className="text-3xl font-black text-[#1B4332] mb-2 tracking-tight">RESOURCES HUB</h2>
+          <p className="text-[#5D4037]/70 font-bold text-sm uppercase tracking-widest">Essential Tools for Every Farmer</p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            { tag: "LIVE", icon: "📊", title: "Mandi Prices", desc: "Real-time updates on crop prices in your nearest markers (APMCs).", color: "#2D6A4F" },
+            { tag: "NEW", icon: "📜", title: "Govt Schemes", desc: "Easy guides for PM-Kisan, Fasal Bima Yojana, and local subsidies.", color: "#74C69D" },
+            { tag: "LIBRARY", icon: "🐛", title: "Pest Catalog", desc: "Identify common pests and diseases with organic and chemical cures.", color: "#FFB703" },
+            { tag: "ADVISORY", icon: "☀️", title: "Weather Alerts", desc: "Detailed sowing and harvesting windows based on local forecasts.", color: "#1B4332" },
+            { tag: "SERVICES", icon: "🚜", title: "Rent Machinery", desc: "Connect with local Custom Hiring Centers for modern equipment.", color: "#5D4037" },
+            { tag: "GUIDE", icon: "💧", title: "Water Saving", desc: "Drip irrigation models and monsoon water harvesting techniques.", color: "#40916C" }
+          ].map((item, i) => (
+            <div key={i} className="harvest-card p-6 flex flex-col items-start gap-4 hover:border-[#74C69D] group transition-all cursor-pointer">
+              <div className="flex justify-between w-full items-center">
+                <div className="text-3xl grayscale group-hover:grayscale-0 transition-all">{item.icon}</div>
+                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[#2D6A4F]/5 text-[#2D6A4F] border border-[#2D6A4F]/10">{item.tag}</span>
+              </div>
+              <div>
+                <h3 className="font-black text-[#1B4332] text-lg leading-tight mb-2">{item.title}</h3>
+                <p className="text-xs font-medium text-[#5D4037]/70 leading-relaxed">{item.desc}</p>
+              </div>
+              <button className="text-[10px] font-black text-[#2D6A4F] mt-auto uppercase tracking-wider group-hover:translate-x-1 transition-transform">View Details →</button>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 p-4 bg-[#74C69D]/10 rounded-2xl flex items-center justify-between border border-[#74C69D]/20">
+          <div className="flex items-center gap-3">
+             <span className="text-xl">📞</span>
+             <p className="text-[11px] font-bold text-[#1B4332]">Kissan Helpline: <span className="text-[#2D6A4F]">1800-180-1551</span></p>
+          </div>
+          <button className="text-[10px] font-black bg-[#2D6A4F] text-white px-4 py-2 rounded-lg hover:scale-105 transition-transform">CALL NOW</button>
+        </div>
+      </div>
+    </div>
+);
+
 const LandingPage = ({ onEnterChat }) => {
   const [showGuide, setShowGuide] = useState(false);
-  const [showResources, setShowResources] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+
+  // Auth State
+  const [isLoggedIn, setIsLoggedIn] = useState(() => !!localStorage.getItem("kissan_profile"));
+  const [authMode, setAuthMode] = useState("login"); // 'login' or 'signup'
+
+  // ... (handleStart remains same)
+
+  const handleStart = () => {
+    if (isLoggedIn) {
+      onEnterChat();
+    } else {
+      setShowAuth(true);
+    }
+  };
+
+  const AuthModal = () => {
+    const [formData, setFormData] = useState({
+        phone: "",
+        otp: "",
+        name: "",
+        location: "",
+        crop: "Rice",
+        land: "2 Acres"
+    });
+
+    const handleAuth = async () => {
+        try {
+            console.log("Attempting Auth with:", formData); // Debug log
+
+            if (authMode === "login") {
+                // LOGIN LOGIC
+                if (!formData.phone || !formData.otp) {
+                    alert("Please enter phone and password");
+                    return;
+                }
+                const res = await fetch(`${API_BASE}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        phone: formData.phone,
+                        password: formData.otp // Using OTP field as Password input
+                    })
+                });
+                
+                const data = await res.json();
+                console.log("Login Response:", data);
+
+                if (!res.ok) throw new Error(data.detail || "Login failed");
+
+                // Store user data
+                localStorage.setItem("kissan_profile", JSON.stringify(data.user));
+                setIsLoggedIn(true);
+                setShowAuth(false);
+                onEnterChat(); // Proceed to chat
+            } else {
+                // SIGNUP LOGIC
+                if (!formData.name || !formData.phone || !formData.location || !formData.otp) {
+                    alert("Please fill all required fields including password");
+                    return;
+                }
+                const res = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: formData.name,
+                        phone: formData.phone,
+                        password: formData.otp, // Using OTP field as Password input
+                        location: formData.location,
+                        crop: formData.crop || "Rice",
+                        land_size: formData.land || "2 Acres"
+                    })
+                });
+                
+                const data = await res.json();
+                console.log("Signup Response:", data);
+
+                if (!res.ok) throw new Error(data.detail || "Registration failed");
+
+                // Store user data
+                localStorage.setItem("kissan_profile", JSON.stringify(data.user));
+                setIsLoggedIn(true);
+                setShowAuth(false);
+                onEnterChat(); // Proceed to chat
+            }
+        } catch (error) {
+            console.error("Auth Error:", error);
+            alert(error.message);
+        }
+    };
+
+    return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[#1B4332]/70 backdrop-blur-md" onClick={() => setShowAuth(false)}></div>
+      <div className="harvest-card w-full max-w-md p-8 relative z-10 animate-scale-up overflow-hidden bg-[#FDFBF7]">
+        <button 
+          onClick={() => setShowAuth(false)}
+          className="absolute top-4 right-4 text-[#5D4037]/50 hover:text-[#5D4037] font-bold"
+        >✕</button>
+        
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-[#2D6A4F] rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4 shadow-lg">
+            {authMode === "login" ? "🔑" : "📝"}
+          </div>
+          <h2 className="text-2xl font-black text-[#1B4332] mb-1 tracking-tight">
+            {authMode === "login" ? "WELCOME BACK" : "JOIN KISSAN SEVA"}
+          </h2>
+          <p className="text-[10px] font-bold text-[#5D4037]/60 uppercase tracking-widest">
+            {authMode === "login" ? "Access your digital farm assistant" : "Create your farmer profile to get started"}
+          </p>
+        </div>
+
+        <div className="space-y-4">
+            {authMode === "signup" && (
+                <div className="animate-fade-up space-y-4">
+                    <div className="space-y-1">
+                        <label className="text-[10px] font-black text-[#5D4037]/60 uppercase">Full Name</label>
+                        <input 
+                            type="text" 
+                            placeholder="Ex. Ram Kumar"
+                            value={formData.name}
+                            onChange={e => setFormData({...formData, name: e.target.value})}
+                            className="w-full farmer-input p-3 text-sm font-bold text-[#1B4332] outline-none"
+                        />
+                    </div>
+                </div>
+            )}
+
+            <div className="space-y-1">
+                <label className="text-[10px] font-black text-[#5D4037]/60 uppercase">Mobile Number</label>
+                <div className="flex">
+                    <span className="farmer-input p-3 text-sm font-bold text-[#5D4037]/60 border-r-0 rounded-r-none bg-[#000000]/5">+91</span>
+                    <input 
+                        type="tel" 
+                        placeholder="98765 43210"
+                        value={formData.phone}
+                        onChange={e => setFormData({...formData, phone: e.target.value})}
+                        className="w-full farmer-input p-3 text-sm font-bold text-[#1B4332] outline-none rounded-l-none"
+                        maxLength="10"
+                    />
+                </div>
+            </div>
+
+            {authMode === "signup" && (
+                <div className="animate-fade-up space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-[#5D4037]/60 uppercase">Location</label>
+                            <input 
+                                type="text" 
+                                placeholder="District, State"
+                                value={formData.location}
+                                onChange={e => setFormData({...formData, location: e.target.value})}
+                                className="w-full farmer-input p-3 text-sm font-bold text-[#1B4332] outline-none"
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black text-[#5D4037]/60 uppercase">Main Crop</label>
+                            <input 
+                                type="text" 
+                                placeholder="Rice, Wheat..."
+                                value={formData.crop}
+                                onChange={e => setFormData({...formData, crop: e.target.value})}
+                                className="w-full farmer-input p-3 text-sm font-bold text-[#1B4332] outline-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            <div className="space-y-1 mt-4">
+                <label className="text-[10px] font-black text-[#5D4037]/60 uppercase">
+                    {authMode === "login" ? "Password" : "Create Password"}
+                </label>
+                <input 
+                    type="password" 
+                    placeholder="••••••"
+                    value={formData.otp}
+                    onChange={e => setFormData({...formData, otp: e.target.value})}
+                    className="w-full farmer-input p-3 text-sm font-bold text-[#1B4332] outline-none"
+                />
+                {authMode === "login" && (
+                    <p className="text-[9px] text-right font-bold text-[#2D6A4F] cursor-pointer hover:underline">Forgot Password?</p>
+                )}
+            </div>
+
+            <button 
+                onClick={handleAuth}
+                className="w-full btn-primary py-4 text-xs font-black tracking-widest uppercase mt-4"
+            >
+                {authMode === "login" ? "Access Dashboard" : "Register Profile"}
+            </button>
+
+            <div className="text-center pt-2">
+                <p className="text-xs font-bold text-[#5D4037]/60">
+                    {authMode === "login" ? "New to KissanSeva?" : "Already have an account?"}{" "}
+                    <button 
+                        onClick={() => setAuthMode(authMode === "login" ? "signup" : "login")}
+                        className="text-[#2D6A4F] hover:underline"
+                    >
+                        {authMode === "login" ? "Create Account" : "Login Here"}
+                    </button>
+                </p>
+            </div>
+        </div>
+      </div>
+    </div>
+    );
+  };
+
 
   const TeamModal = () => (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -103,54 +575,7 @@ const LandingPage = ({ onEnterChat }) => {
     </div>
   );
 
-  const ResourcesHub = () => (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[#1B4332]/70 backdrop-blur-md" onClick={() => setShowResources(false)}></div>
-      <div className="harvest-card w-full max-w-4xl p-8 relative z-10 animate-scale-up overflow-hidden max-h-[90vh] flex flex-col">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#FFB703] via-[#74C69D] to-[#FFB703]"></div>
-        <button 
-          onClick={() => setShowResources(false)}
-          className="absolute top-6 right-6 w-10 h-10 rounded-full bg-[#2D6A4F]/5 flex items-center justify-center text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white transition-all font-bold"
-        >✕</button>
-        
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-black text-[#1B4332] mb-2 tracking-tight">RESOURCES HUB</h2>
-          <p className="text-[#5D4037]/70 font-bold text-sm uppercase tracking-widest">Essential Tools for Every Farmer</p>
-        </div>
 
-        <div className="flex-1 overflow-y-auto pr-2 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { tag: "LIVE", icon: "📊", title: "Mandi Prices", desc: "Real-time updates on crop prices in your nearest markers (APMCs).", color: "#2D6A4F" },
-            { tag: "NEW", icon: "📜", title: "Govt Schemes", desc: "Easy guides for PM-Kisan, Fasal Bima Yojana, and local subsidies.", color: "#74C69D" },
-            { tag: "LIBRARY", icon: "🐛", title: "Pest Catalog", desc: "Identify common pests and diseases with organic and chemical cures.", color: "#FFB703" },
-            { tag: "ADVISORY", icon: "☀️", title: "Weather Alerts", desc: "Detailed sowing and harvesting windows based on local forecasts.", color: "#1B4332" },
-            { tag: "SERVICES", icon: "🚜", title: "Rent Machinery", desc: "Connect with local Custom Hiring Centers for modern equipment.", color: "#5D4037" },
-            { tag: "GUIDE", icon: "💧", title: "Water Saving", desc: "Drip irrigation models and monsoon water harvesting techniques.", color: "#40916C" }
-          ].map((item, i) => (
-            <div key={i} className="harvest-card p-6 flex flex-col items-start gap-4 hover:border-[#74C69D] group transition-all cursor-pointer">
-              <div className="flex justify-between w-full items-center">
-                <div className="text-3xl grayscale group-hover:grayscale-0 transition-all">{item.icon}</div>
-                <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-[#2D6A4F]/5 text-[#2D6A4F] border border-[#2D6A4F]/10">{item.tag}</span>
-              </div>
-              <div>
-                <h3 className="font-black text-[#1B4332] text-lg leading-tight mb-2">{item.title}</h3>
-                <p className="text-xs font-medium text-[#5D4037]/70 leading-relaxed">{item.desc}</p>
-              </div>
-              <button className="text-[10px] font-black text-[#2D6A4F] mt-auto uppercase tracking-wider group-hover:translate-x-1 transition-transform">View Details →</button>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 p-4 bg-[#74C69D]/10 rounded-2xl flex items-center justify-between border border-[#74C69D]/20">
-          <div className="flex items-center gap-3">
-             <span className="text-xl">📞</span>
-             <p className="text-[11px] font-bold text-[#1B4332]">Kissan Helpline: <span className="text-[#2D6A4F]">1800-180-1551</span></p>
-          </div>
-          <button className="text-[10px] font-black bg-[#2D6A4F] text-white px-4 py-2 rounded-lg hover:scale-105 transition-transform">CALL NOW</button>
-        </div>
-      </div>
-    </div>
-  );
 
   const GuideModal = () => (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -211,14 +636,13 @@ const LandingPage = ({ onEnterChat }) => {
         </div>
         <div className="flex items-center gap-6">
           <button onClick={() => setShowGuide(true)} className="text-sm font-bold text-[#5D4037]/70 hover:text-[#2D6A4F] transition-colors">How it works</button>
-          <button onClick={() => setShowResources(true)} className="text-sm font-bold text-[#5D4037]/70 hover:text-[#2D6A4F] transition-colors">Resources</button>
           <button onClick={() => setShowTeam(true)} className="text-sm font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors border-2 border-[#2D6A4F]/10 px-4 py-2 rounded-full hover:bg-[#2D6A4F]/5">About Us</button>
         </div>
       </header>
 
       {showGuide && <GuideModal />}
-      {showResources && <ResourcesHub />}
       {showTeam && <TeamModal />}
+      {showAuth && <AuthModal />}
 
       {/* Hero Section */}
       <main className="flex-1 w-full max-w-7xl px-8 flex flex-col lg:flex-row items-center justify-center gap-16 z-10 py-12">
@@ -237,10 +661,10 @@ const LandingPage = ({ onEnterChat }) => {
           </p>
           <div className="flex flex-col sm:flex-row items-start gap-4">
             <button
-              onClick={onEnterChat}
+              onClick={handleStart}
               className="btn-primary px-10 py-5 text-lg font-black tracking-widest flex items-center gap-4 animate-pulse-soft group"
             >
-              START FARMING SMARTER
+              {isLoggedIn ? "ENTER DASHBOARD" : "START FARMING SMARTER"}
               <span className="text-2xl group-hover:translate-x-2 transition-transform">→</span>
             </button>
             <div className="flex -space-x-3 items-center ml-2 mt-4 sm:mt-0">
@@ -338,8 +762,10 @@ const TabButton = ({ id, icon, label, isActive, onClick }) => (
 // Farmer Chatbot Component
 // ===================================================================================
 
-const FarmerChatbot = ({ initialMessage }) => {
+const FarmerChatbot = ({ initialMessage, onBack }) => {
   const [showUtility, setShowUtility] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [showCommunity, setShowCommunity] = useState(false);
   const [utilityType, setUtilityType] = useState(null); // 'language', 'settings', 'help', 'profile'
   const [language, setLanguage] = useState('en'); // 'en', 'hi'
   const [appSettings, setAppSettings] = useState({
@@ -348,11 +774,14 @@ const FarmerChatbot = ({ initialMessage }) => {
     notifications: true
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [profileData, setProfileData] = useState({
-    name: "Aditya Kumar",
-    location: "Village: Kanjari, Bihar",
-    crop: "Rice / Paddy",
-    land: "2.5 Acres"
+  const [profileData, setProfileData] = useState(() => {
+    const saved = localStorage.getItem("kissan_profile");
+    return saved ? JSON.parse(saved) : {
+        name: "Aditya Kumar",
+        location: "Village: Kanjari, Bihar",
+        crop: "Rice / Paddy",
+        land: "2.5 Acres"
+    };
   });
   const [messages, setMessages] = useState([
     {
@@ -391,10 +820,13 @@ const FarmerChatbot = ({ initialMessage }) => {
   const voiceInputRef = useRef(null);
   const textInputRef = useRef(null);
 
-  const [context, setContext] = useState({
-    crop: "Rice",
-    location: "Kerala",
-    season: "Kharif",
+  const [context, setContext] = useState(() => {
+    const saved = localStorage.getItem("kissan_profile");
+    if (saved) {
+        const p = JSON.parse(saved);
+        return { crop: p.crop, location: p.location, season: "Kharif" };
+    }
+    return { crop: "Rice", location: "Kerala", season: "Kharif" };
   });
 
   const [predictionFeatures, setPredictionFeatures] = useState({
@@ -572,12 +1004,23 @@ const FarmerChatbot = ({ initialMessage }) => {
                   <div className="farmer-input p-2"><span className="block text-[8px] text-[#5D4037]/40 font-black">CROP</span><span className="text-[10px] font-bold text-[#1B4332]">{profileData.crop}</span></div>
                   <div className="farmer-input p-2"><span className="block text-[8px] text-[#5D4037]/40 font-black">LAND</span><span className="text-[10px] font-bold text-[#1B4332]">{profileData.land}</span></div>
                 </div>
-                <button 
-                  onClick={() => setIsEditingProfile(true)}
-                  className="mt-4 text-[10px] font-bold text-[#2D6A4F] hover:underline"
-                >
-                  EDIT PROFILE
-                </button>
+                <div className="pt-4 space-y-2">
+                    <button 
+                      onClick={() => setIsEditingProfile(true)}
+                      className="w-full text-[10px] font-bold text-[#2D6A4F] hover:underline uppercase tracking-widest"
+                    >
+                      EDIT PROFILE
+                    </button>
+                    <button 
+                      onClick={() => {
+                        localStorage.removeItem("kissan_profile");
+                        window.location.reload();
+                      }}
+                      className="w-full py-3 bg-[#E63946]/10 text-[#E63946] text-xs font-black rounded-lg hover:bg-[#E63946] hover:text-white transition-colors uppercase tracking-widest"
+                    >
+                      LOGOUT
+                    </button>
+                </div>
               </div>
             )}
           </div>
@@ -698,6 +1141,13 @@ const FarmerChatbot = ({ initialMessage }) => {
       <div className="max-w-full mx-auto w-full h-full flex flex-col p-2 md:p-3 gap-3">
         <header className="harvest-card p-3 flex items-center justify-between mb-1">
           <div className="flex items-center gap-4">
+            <button 
+              onClick={onBack}
+              className="w-10 h-10 bg-[#F1F8E9] rounded-xl flex items-center justify-center text-lg text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white transition-all organic-shadow font-bold"
+              title="Back to Home"
+            >
+              ⬅️
+            </button>
             <div className="w-10 h-10 bg-[#2D6A4F] rounded-xl flex items-center justify-center text-xl organic-shadow">
               🚜
             </div>
@@ -720,8 +1170,35 @@ const FarmerChatbot = ({ initialMessage }) => {
           </nav>
 
           <div className="flex items-center gap-3">
+             <div className="hidden sm:flex items-center gap-2">
+                <button 
+                  onClick={() => setShowCalendar(true)} 
+                  title="Crop Calendar" 
+                  className="w-9 h-9 rounded-xl bg-[#2D6A4F]/5 hover:bg-[#2D6A4F] hover:text-white flex items-center justify-center text-lg transition-all organic-shadow"
+                >
+                  🗓️
+                </button>
+                <button 
+                  onClick={() => setShowCommunity(true)} 
+                  title="Community Feed" 
+                  className="w-9 h-9 rounded-xl bg-[#2D6A4F]/5 hover:bg-[#2D6A4F] hover:text-white flex items-center justify-center text-lg transition-all organic-shadow mr-2"
+                >
+                  👨‍🌾
+                </button>
+             </div>
              <div className="hidden sm:flex items-center gap-2 mr-4">
-                {/* Utility icons removed as per user request */}
+                <div 
+                  onClick={() => { setUtilityType('profile'); setShowUtility(true); }}
+                  className="flex items-center gap-3 cursor-pointer hover:bg-[#2D6A4F]/5 py-1 px-2 rounded-xl transition-colors border border-transparent hover:border-[#2D6A4F]/10"
+                >
+                  <div className="text-right hidden md:block">
+                    <p className="text-xs font-black text-[#1B4332] leading-none mb-0.5">{profileData.name}</p>
+                    <p className="text-[9px] font-bold text-[#5D4037]/60 uppercase tracking-wider leading-none">{profileData.location.split(',')[0]}</p>
+                  </div>
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#2D6A4F] to-[#1B4332] flex items-center justify-center text-white font-black shadow-md border-2 border-[#FDFBF7]">
+                    {profileData.name.charAt(0)}
+                  </div>
+                </div>
              </div>
             <div className="hidden lg:block text-right border-l border-[#2D6A4F]/10 pl-4">
               <div className="text-[8px] uppercase tracking-widest text-[#5D4037]/50 font-bold mb-0.5">Status</div>
@@ -909,14 +1386,10 @@ const FarmerChatbot = ({ initialMessage }) => {
               </button>
             ))}
             <div className="flex-1"></div>
-            <button 
-              onClick={() => { setUtilityType('settings'); setShowUtility(true); }}
-              className="w-full h-16 harvest-card flex items-center justify-center text-xl hover:bg-[#FFB703] transition-all border border-[#2D6A4F]/10"
-            >
-              ⚙️
-            </button>
           </aside>
 
+          {showCalendar && <CropCalendarModal onClose={() => setShowCalendar(false)} />}
+          {showCommunity && <CommunityModal onClose={() => setShowCommunity(false)} isLoggedIn={true} />}
           {renderUtilityModal()}
         </main>
       </div>
@@ -960,7 +1433,7 @@ const App = () => {
 
   return showChat ? (
     <ErrorBoundary>
-      <FarmerChatbot initialMessage={initialMsg} />
+      <FarmerChatbot initialMessage={initialMsg} onBack={() => setShowChat(false)} />
     </ErrorBoundary>
   ) : (
     <LandingPage onEnterChat={handleEnterChat} />
