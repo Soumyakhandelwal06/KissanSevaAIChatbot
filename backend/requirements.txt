@@ -28,5 +28,5 @@ aiofiles==23.2.1
 google-genai>=0.3.0
 motor==3.3.2
 bcrypt==4.1.2
-padding-oracle==1.0
+
 passlib[bcrypt]==1.7.4

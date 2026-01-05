@@ -5,8 +5,8 @@ import "./App.css";
 // CONFIGURATION
 // Use the FastAPI server URL (running on port 8000 by default)
 // ===================================================================================
-const API_BASE = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/api` : "http://localhost:8000/api";
-const HEALTH_CHECK_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/health` : "http://localhost:8000/health";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/api` : "http://127.0.0.1:8000/api";
+const HEALTH_CHECK_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/health` : "http://127.0.0.1:8000/health";
 
 // ===================================================================================
 // Error Boundary for Debugging
@@ -933,7 +933,7 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
           ? `Searching for: ${initialMessage}...` 
           : "Namaste! 🌱 I am your KissanSeva Assistant.\n\nI can help you grow better crops, identify pests from photos, and provide weather-based advice. How can I help you today?",
       isUser: false,
-      isUser: false,
+
       type: initialMessage ? "initial" : "welcome",
       timestamp: new Date(),
     },
@@ -957,9 +957,101 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
   const [connectionStatus, setConnectionStatus] = useState("checking");
   const messagesEndRef = useRef(null);
   const chatContainerRef = useRef(null);
+  // Image Scan State
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageQuery, setImageQuery] = useState("");
+
   const imageInputRef = useRef(null);
   const voiceInputRef = useRef(null);
   const textInputRef = useRef(null);
+  
+  // Voice Recognition State
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  
+  const LANG_LOCALES = {
+      'en': 'en-IN',
+      'hi': 'hi-IN',
+      'pa': 'pa-IN',
+      'te': 'te-IN',
+      'mr': 'mr-IN',
+      'ta': 'ta-IN',
+      'gu': 'gu-IN',
+      'kn': 'kn-IN',
+      'ml': 'ml-IN',
+      'bn': 'bn-IN'
+  };
+
+  const LANG_NAMES = {
+      'en': 'English',
+      'hi': 'Hindi',
+      'pa': 'Punjabi',
+      'te': 'Telugu',
+      'mr': 'Marathi',
+      'ta': 'Tamil',
+      'gu': 'Gujarati',
+      'kn': 'Kannada',
+      'ml': 'Malayalam',
+      'bn': 'Bengali'
+  };
+
+  useEffect(() => {
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true; // Keep listening
+        recognitionRef.current.interimResults = true; // Show results as we speak
+        recognitionRef.current.lang = LANG_LOCALES[language] || 'en-IN'; // Dynamic language
+
+        recognitionRef.current.onresult = (event) => {
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+            
+            // Append final transcript to existing text or update live
+            if (finalTranscript) {
+                setTextInput(prev => prev + (prev ? " " : "") + finalTranscript);
+            }
+        };
+
+        recognitionRef.current.onerror = (event) => {
+            console.error("Speech recognition error", event.error);
+            setIsListening(false);
+        };
+
+        recognitionRef.current.onend = () => {
+            // Auto restart if still supposed to be listening (optional, but good for long dictation)
+            // For now, we'll just stop the UI state properly
+            if (isListening) {
+                 // recognitionRef.current.start(); 
+                 setIsListening(false);
+            }
+        };
+    }
+  }, [language]); // Re-init if language changes
+
+  const toggleListening = () => {
+      if (!recognitionRef.current) {
+          alert("Speech recognition is not supported in this browser. Try Chrome.");
+          return;
+      }
+
+      if (isListening) {
+          recognitionRef.current.stop();
+          setIsListening(false);
+      } else {
+          recognitionRef.current.start();
+          setIsListening(true);
+      }
+  };
 
   const [context, setContext] = useState(() => {
     const saved = localStorage.getItem("kissan_profile");
@@ -1228,15 +1320,25 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
     }
   };
 
-  const uploadImage = async () => {
-    const file = imageInputRef.current?.files[0];
-    if (!file) return;
+  const onSelectFile = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        setSelectedFile(file);
+        setImagePreview(URL.createObjectURL(file));
+    }
+  };
 
-    addMessage(`Checking photo: ${file.name}`, true, "image");
+  const handleAnalyzeImage = async () => {
+    if (!selectedFile) return;
+
+    addMessage(`Analyzing photo... ${imageQuery ? `\nQuestion: "${imageQuery}"` : ""}`, true, "image");
     setIsLoading(true);
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", selectedFile);
+    if (imageQuery) {
+        formData.append("query", imageQuery);
+    }
 
     try {
       const response = await fetch(`${API_BASE}/image`, {
@@ -1250,6 +1352,10 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
       if (response.ok) {
         let result = `Diagnosis: ${data.label}\n\nSolution: ${data.remedy}`;
         addMessage(result, false, "image");
+        // Reset after success
+        setSelectedFile(null);
+        setImagePreview(null);
+        setImageQuery("");
       } else {
         addMessage("Could not analyze the photo. Please try again with a clearer shot.", false, "error");
       }
@@ -1468,23 +1574,90 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
                 </div>
               )}
               {activeTab === "image" && (
-                <div className="flex flex-col items-center py-6 bg-[#2D6A4F]/5 rounded-2xl border-2 border-dashed border-[#2D6A4F]/20">
-                  <span className="text-4xl mb-3">📸</span>
-                  <p className="text-[10px] font-bold text-[#5D4037]/70 uppercase mb-4">Upload Crop Photo for Diagnosis</p>
-                  <label className="btn-primary px-8 py-3 cursor-pointer text-xs font-black tracking-widest">
-                    CHOOSE FILE
-                    <input type="file" ref={imageInputRef} onChange={uploadImage} accept="image/*" className="hidden" />
-                  </label>
+                <div className="flex flex-col items-center py-4 bg-[#2D6A4F]/5 rounded-2xl border-2 border-dashed border-[#2D6A4F]/20 animate-fade-up">
+                  {!selectedFile ? (
+                      <>
+                        <span className="text-4xl mb-3">📸</span>
+                        <p className="text-[10px] font-bold text-[#5D4037]/70 uppercase mb-4">Upload Crop Photo for Diagnosis</p>
+                        <label className="btn-primary px-8 py-3 cursor-pointer text-xs font-black tracking-widest">
+                            CHOOSE FILE
+                            <input type="file" ref={imageInputRef} onChange={onSelectFile} accept="image/*" className="hidden" />
+                        </label>
+                      </>
+                  ) : (
+                      <div className="w-full px-6 flex flex-col items-center gap-4">
+                          <div className="relative group">
+                              <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-xl border-4 border-white shadow-lg transform rotate-2" />
+                              <button 
+                                onClick={() => { setSelectedFile(null); setImagePreview(null); }}
+                                className="absolute -top-2 -right-2 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center font-bold shadow-md hover:scale-110 transition-transform"
+                              >✕</button>
+                          </div>
+                          
+                          <div className="w-full bg-white p-3 rounded-xl border border-[#2D6A4F]/10 shadow-sm flex items-center gap-2">
+                             <input
+                               type="text"
+                               value={imageQuery}
+                               onChange={(e) => setImageQuery(e.target.value)}
+                               placeholder="Add a specific question (optional)..."
+                               className="flex-1 text-xs font-bold text-[#1B4332] outline-none bg-transparent placeholder:text-[#5D4037]/30"
+                             />
+                          </div>
+
+                          <button 
+                            onClick={handleAnalyzeImage}
+                            disabled={isLoading}
+                            className="btn-primary w-full py-3 text-xs font-black tracking-widest flex items-center justify-center gap-2"
+                          >
+                             {isLoading ? "ANALYZING..." : "ANALYZE NOW ⚡"}
+                          </button>
+                      </div>
+                  )}
                 </div>
               )}
               {activeTab === "voice" && (
-                <div className="flex flex-col items-center py-6 bg-[#FFB703]/5 rounded-2xl border-2 border-dashed border-[#FFB703]/20">
-                  <span className="text-4xl mb-3">🎤</span>
-                  <p className="text-[10px] font-bold text-[#5D4037]/70 uppercase mb-4">Voice Assistant Activity</p>
-                  <label className="bg-[#FFB703] text-[#1B4332] font-black px-8 py-3 rounded-full cursor-pointer text-xs tracking-widest organic-shadow">
-                    START TALKING
-                    <input type="file" ref={voiceInputRef} onChange={uploadVoice} accept="audio/*" className="hidden" />
-                  </label>
+                <div className="flex items-center gap-3 p-3 bg-[#FFB703]/5 rounded-xl border border-dashed border-[#FFB703]/20 animate-fade-up">
+                  <button 
+                    onClick={toggleListening}
+                    className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center transition-all organic-shadow ${
+                        isListening 
+                        ? "bg-red-500 text-white animate-pulse shadow-red-500/50" 
+                        : "bg-[#FFB703] text-[#1B4332] hover:bg-[#FFB703]/80"
+                    }`}
+                  >
+                    <span className="text-xl">{isListening ? "⏹" : "🎤"}</span>
+                  </button>
+
+                  <div className="flex-1 min-w-0">
+                      <div className="bg-white px-3 py-2 rounded-lg border border-[#2D6A4F]/10 shadow-sm flex items-center gap-2">
+                          <input
+                               type="text"
+                               value={textInput}
+                               onChange={(e) => setTextInput(e.target.value)}
+                               placeholder={isListening ? "Listening..." : "Tap mic to speak..."}
+                               className="flex-1 text-xs font-bold text-[#1B4332] outline-none bg-transparent placeholder:text-[#5D4037]/30"
+                          />
+                          <button 
+                                onClick={() => sendTextMessage()} 
+                                disabled={!textInput.trim()}
+                                className="text-[#2D6A4F] text-[10px] font-black uppercase tracking-widest hover:underline disabled:opacity-50 flex-shrink-0"
+                          >
+                                SEND ➤
+                          </button>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 ml-1">
+                          <span className="text-[8px] font-bold text-[#5D4037]/40 uppercase tracking-wider">{isListening ? "🔴 Recording in:" : "Language:"}</span>
+                          <select 
+                            value={language} 
+                            onChange={(e) => setLanguage(e.target.value)}
+                            className="bg-transparent text-[8px] font-bold text-[#2D6A4F] uppercase tracking-wider outline-none border-b border-[#2D6A4F]/20 cursor-pointer"
+                          >
+                            {Object.entries(LANG_NAMES).map(([code, name]) => (
+                                <option key={code} value={code}>{name}</option>
+                            ))}
+                          </select>
+                      </div>
+                  </div>
                 </div>
               )}
               {activeTab === "predict" && (

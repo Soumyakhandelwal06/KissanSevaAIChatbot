@@ -3,7 +3,7 @@ import json
 import asyncio
 import logging
 from typing import Optional
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -142,7 +142,10 @@ async def chat(request: ChatRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/image", response_model=ImageResponse)
-async def analyze_image(file: UploadFile = File(...)):
+async def analyze_image(
+    file: UploadFile = File(...),
+    query: Optional[str] = Form(None)
+):
     try:
         image_bytes = await file.read()
         if len(image_bytes) > 10 * 1024 * 1024:
@@ -157,11 +160,15 @@ async def analyze_image(file: UploadFile = File(...)):
             "You are a crop disease and pest expert.\n"
             "Analyze the image and return STRICT JSON with keys:\n"
             "label, confidence, remedy\n"
-            "confidence must be between 0.0 and 1.0"
+            "confidence must be between 0.0 and 1.0\n"
         )
+        
+        user_prompt = "Analyze this crop image"
+        if query and query.strip():
+            user_prompt = f"User Question: {query}\n\nAnalyze the crop image based on the user's question."
 
         resp = await generate_content_with_retry(
-            contents=[image_part, "Analyze this crop image"],
+            contents=[image_part, user_prompt],
             config=genai.types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 response_mime_type="application/json",
