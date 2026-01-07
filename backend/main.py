@@ -91,11 +91,9 @@ async def generate_content_with_retry(contents, config):
 
 def build_system_prompt(ctx: ChatContext) -> str:
     return (
-        "You are an expert Krishi Officer (Agricultural Advisor) for India. "
-        "Give practical, accurate farming advice.\n"
-        "If the user writes in Malayalam, reply fully in Malayalam.\n"
-        "If the user writes in Hindi, reply fully in Hindi.\n"
-        "Use bullet points and simple language.\n\n"
+        f"You are an expert Krishi Officer (Agricultural Advisor) for India. "
+        f"IMPORTANT: You MUST answer strictly in {ctx.language} language only.\n"
+        "Give practical, accurate farming advice. Use bullet points and simple language.\n\n"
         f"Context:\nCrop: {ctx.crop}\nLocation: {ctx.location}\nSeason: {ctx.season}"
     )
 
