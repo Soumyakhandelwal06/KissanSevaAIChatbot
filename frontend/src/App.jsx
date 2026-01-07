@@ -1406,6 +1406,7 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
     if (imageQuery) {
         formData.append("query", imageQuery);
     }
+    formData.append("language", LANG_NAMES[language] || "English");
 
     try {
       const response = await fetch(`${API_BASE}/image`, {

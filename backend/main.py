@@ -160,6 +160,7 @@ async def analyze_image(
 
         system_prompt = (
             "You are a crop disease and pest expert.\n"
+            f"IMPORTANT: All responses (label and remedy) MUST be strictly in {language} language.\n"
             "Analyze the image and return STRICT JSON with keys:\n"
             "label, confidence, remedy\n"
             "confidence must be between 0.0 and 1.0\n"
