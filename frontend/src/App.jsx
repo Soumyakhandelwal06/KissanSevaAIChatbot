@@ -1357,7 +1357,11 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           query: message,
-          context: { ...context, features: predictionFeatures },
+          context: { 
+            ...context, 
+            features: predictionFeatures,
+            language: LANG_NAMES[language] || "English"
+          },
         }),
       });
 

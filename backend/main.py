@@ -50,6 +50,7 @@ class ChatContext(BaseModel):
     crop: Optional[str] = "general"
     location: Optional[str] = "India"
     season: Optional[str] = "all"
+    language: Optional[str] = "English"
 
 class ChatRequest(BaseModel):
     query: str
@@ -63,8 +64,8 @@ class ChatResponse(BaseModel):
 
 class ImageResponse(BaseModel):
     label: str
-    confidence: float
     remedy: str
+    confidence: float
     used_model: str
 
 # ===================== HELPERS =====================
