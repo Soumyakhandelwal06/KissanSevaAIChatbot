@@ -47,14 +47,13 @@ app.add_middleware(
 
 # ===================== MODELS =====================
 class ChatContext(BaseModel):
+    model_config = {"extra": "allow"}
+    
     crop: Optional[str] = "general"
     location: Optional[str] = "India"
     season: Optional[str] = "all"
     language: Optional[str] = "English"
     features: Optional[dict] = {}
-
-    class Config:
-        extra = "ignore" # Allow extra fields without failing
 
 class ChatRequest(BaseModel):
     query: str
