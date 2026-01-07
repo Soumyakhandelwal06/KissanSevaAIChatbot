@@ -337,9 +337,9 @@ async def get_mandi(state: Optional[str] = "Maharashtra", commodity: Optional[st
                  for r in records:
                      data.append({
                          "market": r.get("market"),
-                         "min_price": r.get("min_price"),
-                         "max_price": r.get("max_price"),
-                         "modal_price": r.get("modal_price"),
+                         "min_price": int(float(r.get("min_price", 0))),
+                         "max_price": int(float(r.get("max_price", 0))),
+                         "modal_price": int(float(r.get("modal_price", 0))),
                          "date": r.get("arrival_date")
                      })
         except Exception as e:

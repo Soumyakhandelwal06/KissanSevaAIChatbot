@@ -825,6 +825,61 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
   const [searchCity, setSearchCity] = useState("New Delhi");
   const [weatherLoading, setWeatherLoading] = useState(false);
 
+  // Auto-Detect Location Handler
+  const handleLocationClick = () => {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+    }
+
+    setWeatherLoading(true);
+    navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+            // Reverse Geocoding using free OpenStreetMap Nominatim API
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            const data = await res.json();
+            
+            // Extract city/town/village
+            const city = data.address.city || data.address.town || data.address.village || data.address.county;
+            
+            if (city) {
+                setSearchCity(city);
+                // We can immediately fetch weather for this city
+                // But fetchWeather logic uses 'searchCity' state which might not update instantly in closure
+                // So passing city directly would be better, but for now let's just update input 
+                // and let user click search or use useEffect if we wanted auto-search.
+                // Better UX: Auto trigger fetch
+                fetchWeatherForLocation(city);
+            } else {
+                alert("Could not determine city name from location.");
+                setWeatherLoading(false);
+            }
+        } catch (error) {
+            console.error("Reverse geocoding failed:", error);
+            alert("Failed to get location details.");
+            setWeatherLoading(false);
+        }
+    }, (error) => {
+        console.error("Geolocation error:", error);
+        alert("Unable to retrieve your location. Please allow access.");
+        setWeatherLoading(false);
+    });
+  };
+
+  const fetchWeatherForLocation = async (city) => {
+      // Duplicate of fetchWeather but accepting arg to avoid state closure issues
+      try {
+        const response = await fetch(`${API_BASE}/weather?city=${city}`);
+        const data = await response.json();
+        setWeatherData(data);
+      } catch (error) {
+        console.error("Weather fetch failed", error);
+      } finally {
+        setWeatherLoading(false);
+      }
+  };
+
   const fetchWeather = async () => {
     setWeatherLoading(true);
     try {
@@ -1699,6 +1754,14 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
                             placeholder="Enter City Name..."
                             className="flex-1 bg-white border border-[#2D6A4F]/20 rounded-xl px-4 py-3 font-bold text-[#1B4332] outline-none focus:border-[#2D6A4F] shadow-sm"
                         />
+                        <button 
+                            onClick={handleLocationClick} 
+                            disabled={weatherLoading} 
+                            title="Use My Location"
+                            className="w-12 h-12 bg-[#2D6A4F]/10 hover:bg-[#2D6A4F]/20 text-[#2D6A4F] rounded-xl flex items-center justify-center text-xl transition-all"
+                        >
+                            📍
+                        </button>
                         <button onClick={fetchWeather} disabled={weatherLoading} className="btn-primary w-12 h-12 flex items-center justify-center rounded-xl shadow-lg">
                             {weatherLoading ? "⌛" : "🔍"}
                         </button>
@@ -1812,7 +1875,7 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
                     {mandiData && (
                         <div className="space-y-6">
                             {/* Hero Card */}
-                            <div className="harvest-card bg-[#1B4332] p-6 text-white relative overflow-hidden shadow-xl">
+                            <div className="rounded-2xl shadow-xl border border-[#2D6A4F]/10 bg-[#1B4332] p-6 text-white relative overflow-hidden">
                                 <div className="absolute top-0 right-0 p-32 bg-[#2D6A4F] rounded-full blur-3xl opacity-50 -mr-16 -mt-16"></div>
                                 <div className="relative z-10">
                                     <div className="flex justify-between items-start mb-4">
@@ -1821,8 +1884,8 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
                                             <h3 className="text-4xl font-black tracking-tight">₹{mandiData.current?.length > 0 ? Math.max(...mandiData.current.map(r=>r.max_price)) : "N/A"}<span className="text-lg font-bold opacity-60">/qtl</span></h3>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-white/60 text-[10px] font-bold uppercase">{selectedState}</p>
-                                            <p className="text-[#FFB703] font-black text-xl">{selectedCommodity}</p>
+                                            <p className="text-white font-bold text-sm uppercase tracking-wider mb-1 opacity-90">{selectedState}</p>
+                                            <p className="text-[#FFB703] font-black text-2xl tracking-wide">{selectedCommodity}</p>
                                         </div>
                                     </div>
                                     {renderTrendChart()}
