@@ -145,7 +145,8 @@ async def chat(request: ChatRequest):
 @app.post("/api/image", response_model=ImageResponse)
 async def analyze_image(
     file: UploadFile = File(...),
-    query: Optional[str] = Form(None)
+    query: Optional[str] = Form(None),
+    language: Optional[str] = Form("English")
 ):
     try:
         image_bytes = await file.read()

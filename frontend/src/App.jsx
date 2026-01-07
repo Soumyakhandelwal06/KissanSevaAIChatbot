@@ -5,8 +5,13 @@ import "./App.css";
 // CONFIGURATION
 // Use the FastAPI server URL (running on port 8000 by default)
 // ===================================================================================
-const API_BASE = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/api` : "http://127.0.0.1:8000/api";
-const HEALTH_CHECK_URL = import.meta.env.VITE_API_BASE_URL ? `${import.meta.env.VITE_API_BASE_URL}/health` : "http://127.0.0.1:8000/health";
+const getBaseUrl = () => {
+  const url = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+  return url.replace(/\/$/, ""); // Strip trailing slash
+};
+
+const API_BASE = `${getBaseUrl()}/api`;
+const HEALTH_CHECK_URL = `${getBaseUrl()}/health`;
 
 // ===================================================================================
 // Error Boundary for Debugging
@@ -1144,11 +1149,14 @@ const FarmerChatbot = ({ initialMessage, onBack }) => {
 
   useEffect(() => {
     checkConnection();
+    const interval = setInterval(checkConnection, 5000); // Check every 5s
+    
     if (initialMessage) {
       setTimeout(() => {
         sendTextMessage(initialMessage);
       }, 500);
     }
+    return () => clearInterval(interval);
   }, []);
 
   const checkConnection = async () => {
