@@ -29,3 +29,4 @@ google-genai>=0.3.0
 motor>=3.3.0
 bcrypt
 passlib[bcrypt]
+certifi
