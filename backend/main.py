@@ -51,6 +51,10 @@ class ChatContext(BaseModel):
     location: Optional[str] = "India"
     season: Optional[str] = "all"
     language: Optional[str] = "English"
+    features: Optional[dict] = {}
+
+    class Config:
+        extra = "ignore" # Allow extra fields without failing
 
 class ChatRequest(BaseModel):
     query: str
@@ -117,6 +121,7 @@ def health():
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     try:
+        logger.info(f"Chat request received: query='{request.query[:50]}...', language={request.context.language}")
         system_prompt = build_system_prompt(request.context)
         intent = detect_intent(request.query)
 
@@ -136,8 +141,10 @@ async def chat(request: ChatRequest):
         )
 
     except APIError as e:
+        logger.error(f"Gemini API Error: {e}")
         raise HTTPException(status_code=500, detail=f"Gemini API Error: {e}")
     except Exception as e:
+        logger.error(f"Chat endpoint error: {type(e).__name__}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/image", response_model=ImageResponse)
