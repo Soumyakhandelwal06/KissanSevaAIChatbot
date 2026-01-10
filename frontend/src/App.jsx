@@ -760,10 +760,11 @@ const LandingPage = ({ onEnterChat }) => {
               {!isLoggedIn && (
                 <button
                   onClick={handleTryDemo}
-                  className="px-10 py-5 text-lg font-black tracking-widest flex items-center gap-4 group border-2 border-[#2D6A4F] text-[#2D6A4F] rounded-2xl hover:bg-[#2D6A4F] hover:text-white transition-all shadow-sm"
+                  className="px-10 py-5 text-lg font-black tracking-widest flex items-center gap-4 group relative overflow-hidden bg-gradient-to-r from-[#74C69D] to-[#2D6A4F] text-white rounded-2xl shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300"
                 >
-                  TRY DEMO
-                  <span className="text-2xl group-hover:translate-x-2 transition-transform">✨</span>
+                  <span className="absolute inset-0 bg-gradient-to-r from-[#2D6A4F] to-[#1B4332] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                  <span className="relative z-10">TRY DEMO</span>
+                  <span className="relative z-10 text-2xl group-hover:rotate-12 transition-transform duration-300">✨</span>
                 </button>
               )}
             </div>
