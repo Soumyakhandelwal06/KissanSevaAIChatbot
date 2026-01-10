@@ -381,6 +381,11 @@ const LandingPage = ({ onEnterChat }) => {
     }
   };
 
+  const handleTryDemo = () => {
+    // Allow demo mode without login
+    onEnterChat();
+  };
+
   const AuthModal = () => {
     const [formData, setFormData] = useState({
         phone: "",
@@ -596,21 +601,27 @@ const LandingPage = ({ onEnterChat }) => {
           <div className="harvest-card p-4 flex items-center gap-4 bg-[#74C69D]/10 border border-[#2D6A4F]/10">
              <div className="w-14 h-14 bg-[#2D6A4F] rounded-full flex items-center justify-center text-2xl text-white shadow-lg">👨‍💻</div>
              <div>
-                <h3 className="font-black text-[#1B4332] text-lg">Soumya Khandelwal</h3>
+                <a href="https://github.com/Soumyakhandelwal06" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  <h3 className="font-black text-[#1B4332] text-lg hover:text-[#2D6A4F] transition-colors">Soumya Khandelwal</h3>
+                </a>
                 <p className="text-xs font-bold text-[#2D6A4F] uppercase tracking-wider">Key Contributor</p>
              </div>
           </div>
           <div className="harvest-card p-4 flex items-center gap-4 bg-[#FFB703]/10 border border-[#FFB703]/20">
              <div className="w-14 h-14 bg-[#FFB703] rounded-full flex items-center justify-center text-2xl text-[#1B4332] shadow-lg">💡</div>
              <div>
-                <h3 className="font-black text-[#1B4332] text-lg">Naman Agrawal</h3>
+                <a href="https://github.com/Naman-1409" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  <h3 className="font-black text-[#1B4332] text-lg hover:text-[#2D6A4F] transition-colors">Naman Agrawal</h3>
+                </a>
                 <p className="text-xs font-bold text-[#5D4037]/80 uppercase tracking-wider">Key Contributor</p>
              </div>
           </div>
           <div className="harvest-card p-4 flex items-center gap-4 bg-[#E9C46A]/10 border border-[#E9C46A]/20">
              <div className="w-14 h-14 bg-[#E9C46A] rounded-full flex items-center justify-center text-2xl text-[#1B4332] shadow-lg">✨</div>
              <div>
-                <h3 className="font-black text-[#1B4332] text-lg">Somya Porwal</h3>
+                <a href="https://github.com/SomyaPorwal" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                  <h3 className="font-black text-[#1B4332] text-lg hover:text-[#2D6A4F] transition-colors">Somya Porwal</h3>
+                </a>
                 <p className="text-xs font-bold text-[#5D4037]/80 uppercase tracking-wider">Key Contributor</p>
              </div>
           </div>
@@ -639,15 +650,15 @@ const LandingPage = ({ onEnterChat }) => {
         
         <div className="text-center mb-10">
           <h2 className="text-3xl font-black text-[#1B4332] mb-2 tracking-tight">HOW IT WORKS</h2>
-          <p className="text-[#5D4037]/70 font-bold text-sm uppercase tracking-widest">Your 4-Step Path to Better Farming</p>
+          <p className="text-[#5D4037]/70 font-bold text-sm uppercase tracking-widest">Your Easy Path to Better Farming</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {[
-            { step: "01", icon: "📍", title: "Connect", desc: "Set your farm location and snap a photo of your soil context to get started." },
+            { step: "01", icon: "✨", title: "Try Demo", desc: "Click 'Try Demo' to instantly explore the chatbot without signing up, or create an account for full features." },
             { step: "02", icon: "💬", title: "Ask", desc: "Use voice, text, or photos to tell us about your crop concerns or questions." },
-            { step: "03", icon: "⚡", title: "Process", desc: "Our AI analyzes satellite data and field metrics to find the perfect solution." },
-            { step: "04", icon: "📈", title: "Grow", desc: "Receive expert advice and precise predictions to maximize your harvest yield." }
+            { step: "03", icon: "⚡", title: "Get Insights", desc: "Our AI analyzes your query with satellite data and field metrics to find the perfect solution." },
+            { step: "04", icon: "📈", title: "Grow", desc: "Receive expert advice, live mandi prices, weather alerts, and precise predictions to maximize your harvest." }
           ].map((item, i) => (
             <div key={i} className="flex gap-4">
               <div className="flex-shrink-0 w-12 h-12 bg-[#2D6A4F]/10 rounded-2xl flex items-center justify-center text-2xl relative">
@@ -684,9 +695,37 @@ const LandingPage = ({ onEnterChat }) => {
           <div className="w-10 h-10 bg-[#2D6A4F] rounded-xl flex items-center justify-center text-xl shadow-lg">🚜</div>
           <span className="text-xl font-black text-[#1B4332] tracking-tight">KissanSeva<span className="text-[#74C69D]">AI</span></span>
         </div>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-4">
           <button onClick={() => setShowGuide(true)} className="text-sm font-bold text-[#5D4037]/70 hover:text-[#2D6A4F] transition-colors">How it works</button>
-          <button onClick={() => setShowTeam(true)} className="text-sm font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors border-2 border-[#2D6A4F]/10 px-4 py-2 rounded-full hover:bg-[#2D6A4F]/5">About Us</button>
+          <button onClick={() => setShowTeam(true)} className="text-sm font-bold text-[#5D4037]/70 hover:text-[#2D6A4F] transition-colors">About Us</button>
+          
+          {!isLoggedIn ? (
+            <>
+              <button 
+                onClick={() => { setAuthMode("login"); setShowAuth(true); }}
+                className="text-sm font-bold text-[#2D6A4F] hover:text-[#1B4332] transition-colors px-4 py-2 rounded-full hover:bg-[#2D6A4F]/5"
+              >
+                Login
+              </button>
+              <button 
+                onClick={() => { setAuthMode("signup"); setShowAuth(true); }}
+                className="text-sm font-bold text-white bg-[#2D6A4F] hover:bg-[#1B4332] transition-colors px-6 py-2 rounded-full shadow-md"
+              >
+                Sign Up
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={() => {
+                localStorage.removeItem("kissan_profile");
+                setIsLoggedIn(false);
+                window.location.reload();
+              }}
+              className="text-sm font-bold text-white bg-[#E63946] hover:bg-[#C5303D] transition-colors px-6 py-2 rounded-full shadow-md"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </header>
 
@@ -709,14 +748,25 @@ const LandingPage = ({ onEnterChat }) => {
             Harness the power of AI to protect your crops, optimize your harvest, 
             and secure your family's future with data-driven field support.
           </p>
-          <div className="flex flex-col sm:flex-row items-start gap-4">
-            <button
-              onClick={handleStart}
-              className="btn-primary px-10 py-5 text-lg font-black tracking-widest flex items-center gap-4 animate-pulse-soft group"
-            >
-              {isLoggedIn ? "ENTER DASHBOARD" : "START FARMING SMARTER"}
-              <span className="text-2xl group-hover:translate-x-2 transition-transform">→</span>
-            </button>
+          <div className="flex flex-col items-start gap-4">
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <button
+                onClick={handleStart}
+                className="btn-primary px-10 py-5 text-lg font-black tracking-widest flex items-center gap-4 animate-pulse-soft group"
+              >
+                {isLoggedIn ? "ENTER DASHBOARD" : "START FARMING SMARTER"}
+                <span className="text-2xl group-hover:translate-x-2 transition-transform">→</span>
+              </button>
+              {!isLoggedIn && (
+                <button
+                  onClick={handleTryDemo}
+                  className="px-10 py-5 text-lg font-black tracking-widest flex items-center gap-4 group border-2 border-[#2D6A4F] text-[#2D6A4F] rounded-2xl hover:bg-[#2D6A4F] hover:text-white transition-all shadow-sm"
+                >
+                  TRY DEMO
+                  <span className="text-2xl group-hover:translate-x-2 transition-transform">✨</span>
+                </button>
+              )}
+            </div>
             <div className="flex -space-x-3 items-center ml-2 mt-4 sm:mt-0">
                {[1,2,3,4].map(i => (
                  <div key={i} className="w-10 h-10 rounded-full border-4 border-[#FDFBF7] bg-[#2D6A4F] flex items-center justify-center text-[10px] text-white font-bold">
